@@ -1533,19 +1533,7 @@
             const parseTime = performance.now() - parseStartTime;
             console.log(`CSV 파싱 시간: ${parseTime.toFixed(2)}ms`);
             
-            // category_group 매핑 함수
-            const mapToGroupCategory = (detailCategory) => {
-              const outageBlock = ['internet_shutdown', 'tech_outage', 'power_outage', 'censorship', 'cyber_attack', 'infrastructure_damage'];
-              const socialCrisis = ['war_conflict', 'terrorism_explosion', 'natural_disaster', 'protest_strike', 'curfew', 'pandemic', 'economic'];
-              const seasonalCalendar = ['holiday', 'school_calendar', 'election'];
-              const gamingCompetitor = ['gaming', 'competitor_game', 'social_trend', 'sports_event', 'major_event'];
-              
-              if (outageBlock.includes(detailCategory)) return 'outage_block';
-              if (socialCrisis.includes(detailCategory)) return 'social_crisis';
-              if (seasonalCalendar.includes(detailCategory)) return 'seasonal_calendar';
-              if (gamingCompetitor.includes(detailCategory)) return 'gaming_competitor';
-              return 'other';
-            };
+            // category_group 매핑은 전역 함수 사용 (중복 제거)
             
             const mapStartTime = performance.now();
             // HTML 태그 제거를 위한 정규식 (한 번만 컴파일)
@@ -1557,6 +1545,7 @@
               const cleanTitle = (row.title || '').replace(htmlTagRegex, '').trim();
               
               const category = row.category || 'other';
+              // category_group이 CSV에 없으면 자동 매핑 (전역 함수 사용)
               const categoryGroup = row.category_group || mapToGroupCategory(category);
               
               return {
@@ -1574,6 +1563,14 @@
             });
             const mapTime = performance.now() - mapStartTime;
             console.log(`데이터 매핑 시간: ${mapTime.toFixed(2)}ms`);
+            
+            // 카테고리 그룹별 통계 출력
+            const groupStats = {};
+            allNewsData.forEach(news => {
+              const group = news.category_group || 'other';
+              groupStats[group] = (groupStats[group] || 0) + 1;
+            });
+            console.log('카테고리 그룹별 뉴스 수:', groupStats);
             
             document.getElementById('newsMethodInfo').textContent = `총 ${allNewsData.length}개의 뉴스를 불러왔습니다. (${parseTime.toFixed(0)}ms)`;
             filterNewsByCategory(currentCategoryFilter);
