@@ -180,9 +180,10 @@ def fetch_news_from_claude(keyword: str, countries: List[Dict] = None) -> List[D
     Returns:
         뉴스 리스트
     """
-    api_key = os.getenv('CLAUDE_API_KEY')
+    # CLAUDE_API_KEY 또는 ANTHROPIC_API_KEY 지원 (둘 다 동일)
+    api_key = os.getenv('CLAUDE_API_KEY') or os.getenv('ANTHROPIC_API_KEY')
     if not api_key:
-        logger.warning("CLAUDE_API_KEY가 설정되지 않았습니다.")
+        logger.warning("CLAUDE_API_KEY 또는 ANTHROPIC_API_KEY가 설정되지 않았습니다.")
         return []
     
     try:
@@ -391,6 +392,197 @@ def fetch_news_from_rss(keyword: str, max_retries: int = 3) -> List[Dict]:
     return news_list
 
 
+def refine_news_with_ai(news_item: Dict, api_type: str = 'openai') -> Optional[Dict]:
+    """
+    RSS로 수집한 뉴스를 AI로 정제 (카테고리 분류, 트래픽 영향 분석)
+    
+    Args:
+        news_item: RSS로 수집한 뉴스 아이템
+        api_type: 사용할 API ('openai' 또는 'claude')
+    
+    Returns:
+        정제된 뉴스 딕셔너리 또는 None (관련 없음)
+    """
+    api_key = None
+    api_url = None
+    headers = {}
+    payload = {}
+    
+    if api_type == 'openai':
+        api_key = os.getenv('OPENAI_API_KEY')
+        if not api_key:
+            return news_item  # API 키 없으면 원본 반환
+        
+        api_url = "https://api.openai.com/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        prompt = f"""다음 뉴스를 분석하여 모바일 게임 트래픽에 영향을 줄 수 있는지 판단해주세요:
+
+제목: {news_item.get('title', '')}
+내용: {news_item.get('summary', '')}
+URL: {news_item.get('url', '')}
+
+다음 JSON 형식으로 응답해주세요:
+{{
+  "relevant": true 또는 false (모바일 게임 트래픽에 영향을 줄 수 있으면 true),
+  "category": "gaming, holiday, school_calendar, war_conflict, natural_disaster, internet_shutdown, power_outage, curfew, economic, other 중 하나",
+  "country": "관련 국가명 (없으면 null)",
+  "traffic_impact": "트래픽에 미치는 영향 설명 (간단히)",
+  "summary_kr": "한국어로 2-3줄 요약"
+}}
+
+카테고리 설명:
+- gaming: 게임 관련 뉴스
+- holiday: 공휴일, 명절, 축제
+- school_calendar: 방학, 시험기간 등 학사일정
+- war_conflict: 전쟁, 분쟁, 군사 작전
+- terrorism_explosion: 테러, 폭발, 폭탄 공격
+- protest_strike: 시위, 파업, 폭동
+- natural_disaster: 지진, 홍수, 태풍, 산불 등 천재지변
+- internet_shutdown: 인터넷 차단, 통신 장애
+- power_outage: 정전, 전력 공급 중단
+- curfew: 통금, 봉쇄, 비상사태
+- economic: 경제 위기, 인플레이션, 통화 평가절하
+- tech_outage: 소셜미디어/앱스토어/클라우드 장애
+- cyber_attack: 사이버 공격, DDoS, 해킹
+- censorship: 검열, 앱/게임 금지
+- sports_event: 월드컵, 올림픽 등 스포츠 이벤트
+- election: 선거, 투표, 정치 이벤트
+- pandemic: 팬데믹, 전염병, 격리
+- infrastructure_damage: 인프라 손상, 교량/건물 붕괴
+- competitor_game: 경쟁 게임 출시/업데이트
+- social_trend: 바이럴 트렌드, 인플루언서, e스포츠 토너먼트
+- major_event: 주요 문화 행사, 게임 컨벤션
+- other: 기타
+
+관련이 없으면 relevant: false로 설정하세요."""
+
+        payload = {
+            "model": "gpt-4o-mini",
+            "messages": [
+                {"role": "system", "content": "You are a news analyst. Return only valid JSON."},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.7,
+            "max_tokens": 500
+        }
+    
+    elif api_type == 'claude':
+        api_key = os.getenv('CLAUDE_API_KEY') or os.getenv('ANTHROPIC_API_KEY')
+        if not api_key:
+            return news_item  # API 키 없으면 원본 반환
+        
+        api_url = "https://api.anthropic.com/v1/messages"
+        headers = {
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01",
+            "Content-Type": "application/json"
+        }
+        
+        prompt = f"""다음 뉴스를 분석하여 모바일 게임 트래픽에 영향을 줄 수 있는지 판단해주세요:
+
+제목: {news_item.get('title', '')}
+내용: {news_item.get('summary', '')}
+URL: {news_item.get('url', '')}
+
+다음 JSON 형식으로 응답해주세요:
+{{
+  "relevant": true 또는 false (모바일 게임 트래픽에 영향을 줄 수 있으면 true),
+  "category": "gaming, holiday, school_calendar, war_conflict, natural_disaster, internet_shutdown, power_outage, curfew, economic, other 중 하나",
+  "country": "관련 국가명 (없으면 null)",
+  "traffic_impact": "트래픽에 미치는 영향 설명 (간단히)",
+  "summary_kr": "한국어로 2-3줄 요약"
+}}
+
+카테고리 설명:
+- gaming: 게임 관련 뉴스
+- holiday: 공휴일, 명절, 축제
+- school_calendar: 방학, 시험기간 등 학사일정
+- war_conflict: 전쟁, 분쟁, 군사 작전
+- terrorism_explosion: 테러, 폭발, 폭탄 공격
+- protest_strike: 시위, 파업, 폭동
+- natural_disaster: 지진, 홍수, 태풍, 산불 등 천재지변
+- internet_shutdown: 인터넷 차단, 통신 장애
+- power_outage: 정전, 전력 공급 중단
+- curfew: 통금, 봉쇄, 비상사태
+- economic: 경제 위기, 인플레이션, 통화 평가절하
+- tech_outage: 소셜미디어/앱스토어/클라우드 장애
+- cyber_attack: 사이버 공격, DDoS, 해킹
+- censorship: 검열, 앱/게임 금지
+- sports_event: 월드컵, 올림픽 등 스포츠 이벤트
+- election: 선거, 투표, 정치 이벤트
+- pandemic: 팬데믹, 전염병, 격리
+- infrastructure_damage: 인프라 손상, 교량/건물 붕괴
+- competitor_game: 경쟁 게임 출시/업데이트
+- social_trend: 바이럴 트렌드, 인플루언서, e스포츠 토너먼트
+- major_event: 주요 문화 행사, 게임 컨벤션
+- other: 기타
+
+관련이 없으면 relevant: false로 설정하세요."""
+
+        payload = {
+            "model": "claude-3-5-sonnet-20241022",
+            "max_tokens": 500,
+            "messages": [
+                {"role": "user", "content": prompt}
+            ]
+        }
+    
+    else:
+        return news_item  # 알 수 없는 API 타입이면 원본 반환
+    
+    try:
+        import requests
+        response = requests.post(api_url, headers=headers, json=payload, timeout=30)
+        
+        if response.status_code != 200:
+            logger.warning(f"AI API 오류: {response.status_code}, 원본 뉴스 사용")
+            return news_item
+        
+        data = response.json()
+        
+        # 응답에서 텍스트 추출
+        if api_type == 'openai':
+            content = data['choices'][0]['message']['content']
+        else:  # claude
+            content = data['content'][0]['text']
+        
+        # JSON 추출
+        import re
+        json_match = re.search(r'\{[\s\S]*\}', content)
+        if json_match:
+            ai_result = json.loads(json_match.group())
+            
+            # 관련 없으면 None 반환
+            if not ai_result.get('relevant', False):
+                return None
+            
+            # 정제된 정보 병합
+            refined_item = {
+                **news_item,
+                'category': ai_result.get('category', 'other'),
+                'summary': ai_result.get('summary_kr', news_item.get('summary', '')),
+                'traffic_impact': ai_result.get('traffic_impact', '')
+            }
+            
+            # 국가 정보 업데이트
+            if ai_result.get('country'):
+                refined_item['country'] = ai_result.get('country')
+                refined_item['continent'] = get_continent(ai_result.get('country'))
+            
+            return refined_item
+        else:
+            logger.warning("AI 응답에서 JSON을 찾을 수 없습니다. 원본 사용")
+            return news_item
+            
+    except Exception as e:
+        logger.error(f"AI 정제 실패: {e}, 원본 뉴스 사용")
+        return news_item
+
+
 def cross_validate_news(openai_news: List[Dict], claude_news: List[Dict]) -> List[Dict]:
     """
     OpenAI와 Claude API 결과를 교차검증하여 신뢰도 높은 뉴스 반환
@@ -566,7 +758,7 @@ def save_to_csv(all_news: List[Dict]):
         df = pd.DataFrame(all_news)
         
         # 컬럼 순서 지정 (교차검증 컬럼 포함)
-        base_columns = ['date', 'country', 'continent', 'title', 'summary', 'url', 'source', 'category']
+        base_columns = ['date', 'country', 'continent', 'title', 'summary', 'url', 'source', 'category', 'traffic_impact']
         optional_columns = ['confidence', 'validation', 'openai_summary', 'claude_summary']
         
         # 모든 컬럼 확인
@@ -591,65 +783,95 @@ def save_to_csv(all_news: List[Dict]):
 def main():
     """메인 함수"""
     logger.info("=" * 50)
-    logger.info("뉴스 수집 시작")
+    logger.info("뉴스 수집 시작 (RSS → AI 정제 방식)")
     logger.info("=" * 50)
     
     try:
         # 키워드 로드
         keywords_config = load_keywords()
         base_keywords = keywords_config.get('base_keywords', [])
-        country_keywords = keywords_config.get('country_keywords', {})
+        priority_countries = keywords_config.get('priority_countries', {})
+        traffic_impact_keywords = keywords_config.get('traffic_impact_keywords', {})
         
         # 기존 뉴스 로드
         existing_news = load_existing_news()
         logger.info(f"기존 뉴스: {len(existing_news)}개")
         
-        # 새 뉴스 수집
-        all_new_news = []
+        # 1단계: RSS로 뉴스 수집
+        logger.info("=" * 50)
+        logger.info("1단계: RSS로 뉴스 수집 중...")
+        logger.info("=" * 50)
         
-        # API 타입 결정 (환경 변수에서 읽기, 기본값: 'rss')
-        api_type = os.getenv('NEWS_API_TYPE', 'rss').lower()
-        
-        # 교차검증 모드 확인
-        cross_validate = os.getenv('CROSS_VALIDATE', 'false').lower() == 'true'
-        
-        if cross_validate and api_type in ['openai', 'claude']:
-            logger.info("🔍 교차검증 모드: OpenAI와 Claude API 모두 사용")
-        else:
-            logger.info(f"사용할 API 타입: {api_type}")
-        
-        # 상승/하락 국가 정보 준비 (AI API 사용 시 컨텍스트로 전달)
-        risers_fallers = None
-        if api_type in ['openai', 'claude'] or cross_validate:
-            # 트래픽 데이터가 있다면 상승/하락 국가 정보 전달
-            # (현재는 키워드 기반이지만, 추후 확장 가능)
-            risers_fallers = []
+        all_raw_news = []
         
         # 기본 키워드로 검색
         for keyword in base_keywords:
-            if cross_validate and api_type in ['openai', 'claude']:
-                # 교차검증: 두 API 모두 사용
-                news = fetch_news_with_cross_validation(keyword, risers_fallers)
-            else:
-                news = fetch_news_from_api(keyword, api_type, risers_fallers)
-            all_new_news.extend(news)
-            time.sleep(2)  # API 부하 방지
+            news = fetch_news_from_rss(keyword)
+            all_raw_news.extend(news)
+            time.sleep(1)  # API 부하 방지
         
-        # 국가별 키워드로 검색
-        for country, country_keyword_list in country_keywords.items():
-            for keyword in country_keyword_list:
-                # 국가별 검색 시 해당 국가 정보 전달
-                country_context = [{'country': country}] if (api_type in ['openai', 'claude'] or cross_validate) else None
-                
-                if cross_validate and api_type in ['openai', 'claude']:
-                    news = fetch_news_with_cross_validation(keyword, country_context)
-                else:
-                    news = fetch_news_from_api(keyword, api_type, country_context)
-                all_new_news.extend(news)
-                time.sleep(2)
+        # 주요 국가별 검색
+        for country, country_info in priority_countries.items():
+            # 국가 키워드
+            for keyword in country_info.get('keywords', []):
+                news = fetch_news_from_rss(keyword)
+                for item in news:
+                    item['country'] = country
+                    item['continent'] = get_continent(country)
+                all_raw_news.extend(news)
+                time.sleep(1)
+            
+            # 국가별 주제 키워드
+            for topic in country_info.get('topics', []):
+                keyword = f"{country} {topic}"
+                news = fetch_news_from_rss(keyword)
+                for item in news:
+                    item['country'] = country
+                    item['continent'] = get_continent(country)
+                all_raw_news.extend(news)
+                time.sleep(1)
+        
+        # 트래픽 영향 키워드 검색
+        for category, keywords in traffic_impact_keywords.items():
+            for keyword in keywords[:3]:  # 각 카테고리당 최대 3개 키워드
+                news = fetch_news_from_rss(keyword)
+                all_raw_news.extend(news)
+                time.sleep(1)
+        
+        logger.info(f"RSS 수집 완료: {len(all_raw_news)}개 뉴스")
+        
+        # 2단계: AI로 정제
+        logger.info("=" * 50)
+        logger.info("2단계: AI로 뉴스 정제 중...")
+        logger.info("=" * 50)
+        
+        # API 타입 결정
+        api_type = os.getenv('NEWS_API_TYPE', 'openai').lower()
+        if api_type not in ['openai', 'claude']:
+            api_type = 'openai'
+        
+        logger.info(f"사용할 AI API: {api_type.upper()}")
+        
+        all_refined_news = []
+        skipped_count = 0
+        
+        for i, news_item in enumerate(all_raw_news, 1):
+            if i % 10 == 0:
+                logger.info(f"정제 진행 중: {i}/{len(all_raw_news)}")
+            
+            refined = refine_news_with_ai(news_item, api_type)
+            
+            if refined is None:
+                skipped_count += 1
+            else:
+                all_refined_news.append(refined)
+            
+            time.sleep(1)  # API Rate Limit 방지
+        
+        logger.info(f"AI 정제 완료: {len(all_refined_news)}개 (스킵: {skipped_count}개)")
         
         # 중복 제거
-        unique_new_news = remove_duplicates(existing_news, all_new_news)
+        unique_new_news = remove_duplicates(existing_news, all_refined_news)
         
         # 기존 뉴스와 합치기
         all_news = existing_news + unique_new_news

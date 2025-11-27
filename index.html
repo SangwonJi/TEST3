@@ -292,15 +292,40 @@
           </div>
           <div style="margin-bottom:16px;padding:12px;background:rgba(35,134,54,0.1);border:1px solid rgba(35,134,54,0.3);border-radius:6px;font-size:13px;color:var(--muted)">
             <strong style="color:#238636">💡 참고:</strong> 
-            <span id="newsMethodInfo">Gemini API가 트래픽 변화 원인을 분석하고 관련 뉴스를 찾습니다.</span>
-            <br style="margin-top:8px">
-            <small style="color:var(--muted)">💡 Gemini API 키가 없으면 RSS 피드(Google News 검색)를 사용합니다.</small>
+            <span id="newsMethodInfo">모바일 게임 트래픽에 영향을 줄 수 있는 뉴스를 카테고리별로 확인할 수 있습니다.</span>
+          </div>
+          <!-- 카테고리 필터 -->
+          <div style="margin-bottom:16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <strong style="color:var(--text);font-size:13px">카테고리:</strong>
+            <button class="category-filter active" data-category="all" style="padding:6px 12px;background:linear-gradient(135deg,#238636,#2ea043);border:none;border-radius:6px;color:#fff;font-size:12px;cursor:pointer;font-weight:600">전체</button>
+            <button class="category-filter" data-category="gaming" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">🎮 게임</button>
+            <button class="category-filter" data-category="holiday" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">🎉 공휴일</button>
+            <button class="category-filter" data-category="school_calendar" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">📚 학사일정</button>
+            <button class="category-filter" data-category="war_conflict" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">⚔️ 전쟁/분쟁</button>
+            <button class="category-filter" data-category="terrorism_explosion" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">💣 테러/폭발</button>
+            <button class="category-filter" data-category="protest_strike" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">📢 시위/파업</button>
+            <button class="category-filter" data-category="natural_disaster" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">🌊 천재지변</button>
+            <button class="category-filter" data-category="internet_shutdown" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">📡 인터넷 차단</button>
+            <button class="category-filter" data-category="power_outage" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">⚡ 정전</button>
+            <button class="category-filter" data-category="curfew" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">🚫 통금/봉쇄</button>
+            <button class="category-filter" data-category="economic" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">💰 경제</button>
+            <button class="category-filter" data-category="tech_outage" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">💻 기술 장애</button>
+            <button class="category-filter" data-category="cyber_attack" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">🛡️ 사이버 공격</button>
+            <button class="category-filter" data-category="censorship" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">🚫 검열</button>
+            <button class="category-filter" data-category="sports_event" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">⚽ 스포츠 이벤트</button>
+            <button class="category-filter" data-category="election" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">🗳️ 선거</button>
+            <button class="category-filter" data-category="pandemic" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">🦠 팬데믹</button>
+            <button class="category-filter" data-category="infrastructure_damage" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">🏗️ 인프라 손상</button>
+            <button class="category-filter" data-category="competitor_game" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">🎯 경쟁 게임</button>
+            <button class="category-filter" data-category="social_trend" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">📱 소셜 트렌드</button>
+            <button class="category-filter" data-category="major_event" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">🎪 주요 이벤트</button>
+            <button class="category-filter" data-category="other" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">📋 기타</button>
           </div>
           <div id="newsList">
             <div class="empty-state">
               <div class="empty-state-icon">📰</div>
               <div>뉴스를 불러오는 중...</div>
-              <div style="margin-top:12px;font-size:12px;color:var(--muted)">API 연계 준비 중입니다.</div>
+              <div style="margin-top:12px;font-size:12px;color:var(--muted)">CSV 파일에서 뉴스를 로드합니다.</div>
             </div>
           </div>
         </div>
@@ -456,7 +481,7 @@
               updateCountrySelect(currentData);
             }
             if(document.getElementById('tab-news').classList.contains('active')){
-              loadNewsForRisersFallers(currentData);
+              loadNewsFromCSV();
             }
           } 
         },
@@ -553,7 +578,7 @@
           updateCountrySelect(currentData);
         }
         if(document.getElementById('tab-news').classList.contains('active')){
-          loadNewsForRisersFallers(currentData);
+          loadNewsFromCSV();
         }
       }
     });
@@ -1444,42 +1469,114 @@
     }
 
     // ---------- News & Headlines Tab ----------
-    async function loadNews(countries = null){
-      // countries 파라미터: 상승/하락 국가 배열 [{country: 'USA', change: 5.2, type: 'riser'}, ...]
+    let allNewsData = []; // 전체 뉴스 데이터 저장
+    let currentCategoryFilter = 'all'; // 현재 선택된 카테고리
+    
+    // CSV에서 뉴스 로드
+    async function loadNewsFromCSV(){
       const newsList = document.getElementById('newsList');
       
       // 로딩 표시
       newsList.innerHTML = `
         <div class="empty-state">
           <div class="loading-spinner" style="margin:0 auto"></div>
-          <div style="margin-top:12px">뉴스를 검색하는 중...</div>
+          <div style="margin-top:12px">뉴스를 불러오는 중...</div>
         </div>
       `;
       
       try {
-        // 방법 1: Gemini API 사용 (권장 - 트래픽 변화 원인 분석)
-        const apiKey = window.API_CONFIG?.GEMINI_API_KEY;
-        if(apiKey && apiKey !== 'YOUR_GEMINI_API_KEY_HERE'){
-          document.getElementById('newsMethodInfo').textContent = 'Gemini AI가 트래픽 변화 원인을 분석하고 관련 뉴스를 찾는 중...';
-          const newsFromGemini = await fetchNewsFromGemini(countries);
-          if(newsFromGemini && newsFromGemini.length > 0){
-            document.getElementById('newsMethodInfo').textContent = 'Gemini AI 분석 결과 (트래픽 변화 원인 포함)';
-            renderNews(newsFromGemini);
-            return;
+        const response = await fetch('data/news.csv');
+        if(!response.ok){
+          throw new Error('뉴스 파일을 찾을 수 없습니다.');
+        }
+        
+        const csvText = await response.text();
+        Papa.parse(csvText, {
+          header: true,
+          skipEmptyLines: true,
+          complete: (results) => {
+            allNewsData = results.data.map(row => ({
+              date: row.date || '',
+              country: row.country || '',
+              continent: row.continent || '',
+              title: row.title || '',
+              summary: row.summary || '',
+              url: row.url || '#',
+              source: row.source || 'Unknown',
+              category: row.category || 'other',
+              traffic_impact: row.traffic_impact || ''
+            }));
+            
+            document.getElementById('newsMethodInfo').textContent = `총 ${allNewsData.length}개의 뉴스를 불러왔습니다.`;
+            filterNewsByCategory(currentCategoryFilter);
+          },
+          error: (error) => {
+            console.error('CSV 파싱 오류:', error);
+            newsList.innerHTML = `
+              <div class="empty-state">
+                <div class="empty-state-icon">⚠️</div>
+                <div>뉴스를 불러올 수 없습니다.</div>
+                <div style="margin-top:12px;font-size:12px;color:var(--muted)">${error.message}</div>
+              </div>
+            `;
           }
+        });
+      } catch(error){
+        console.error('뉴스 로드 오류:', error);
+        newsList.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">⚠️</div>
+            <div>뉴스를 불러올 수 없습니다.</div>
+            <div style="margin-top:12px;font-size:12px;color:var(--muted)">${error.message}</div>
+          </div>
+        `;
+      }
+    }
+    
+    // 카테고리별 필터링
+    function filterNewsByCategory(category){
+      currentCategoryFilter = category;
+      
+      let filteredNews = allNewsData;
+      if(category !== 'all'){
+        filteredNews = allNewsData.filter(news => news.category === category);
+      }
+      
+      // 날짜순 정렬 (최신순)
+      filteredNews.sort((a, b) => {
+        const dateA = new Date(a.date);
+        const dateB = new Date(b.date);
+        return dateB - dateA;
+      });
+      
+      renderNews(filteredNews);
+      
+      // 카테고리 버튼 활성화 상태 업데이트
+      document.querySelectorAll('.category-filter').forEach(btn => {
+        if(btn.dataset.category === category){
+          btn.classList.add('active');
+          btn.style.background = 'linear-gradient(135deg,#238636,#2ea043)';
+          btn.style.color = '#fff';
+          btn.style.border = 'none';
+        } else {
+          btn.classList.remove('active');
+          btn.style.background = 'var(--panel)';
+          btn.style.color = 'var(--text)';
+          btn.style.border = '1px solid var(--border)';
         }
-        
-        // 방법 2: RSS 피드 사용 (폴백 - API 키 없을 때, 단순 Google News 검색)
-        document.getElementById('newsMethodInfo').textContent = 'RSS 피드(Google News 검색)로 뉴스를 가져오는 중...';
-        const newsFromRSS = await fetchNewsFromRSS(countries);
-        if(newsFromRSS && newsFromRSS.length > 0){
-          document.getElementById('newsMethodInfo').textContent = 'RSS 피드 결과 (Google News 검색) - 원인 분석 없음';
-          renderNews(newsFromRSS);
-          return;
-        }
-        
-        // 모두 실패 시 샘플 데이터 표시
-        document.getElementById('newsMethodInfo').textContent = '샘플 데이터 표시 중...';
+      });
+    }
+    
+    // 카테고리 필터 이벤트 리스너
+    document.querySelectorAll('.category-filter').forEach(btn => {
+      btn.addEventListener('click', () => {
+        filterNewsByCategory(btn.dataset.category);
+      });
+    });
+    
+    async function loadNews(countries = null){
+      // CSV에서 뉴스 로드 (기존 API 방식 대체)
+      await loadNewsFromCSV();
         renderSampleNews(countries);
       } catch(error) {
         console.error('뉴스 로드 실패:', error);
@@ -1783,32 +1880,64 @@
       const newsList = document.getElementById('newsList');
       
       if(newsArray.length > 0){
+        // 카테고리별 아이콘 및 색상
+        const categoryInfo = {
+          'gaming': { icon: '🎮', color: '#238636' },
+          'holiday': { icon: '🎉', color: '#ff6b6b' },
+          'school_calendar': { icon: '📚', color: '#4ecdc4' },
+          'war_conflict': { icon: '⚔️', color: '#ff4757' },
+          'terrorism_explosion': { icon: '💣', color: '#c44569' },
+          'protest_strike': { icon: '📢', color: '#ff6348' },
+          'natural_disaster': { icon: '🌊', color: '#5352ed' },
+          'internet_shutdown': { icon: '📡', color: '#ffa502' },
+          'power_outage': { icon: '⚡', color: '#ffd32a' },
+          'curfew': { icon: '🚫', color: '#c44569' },
+          'economic': { icon: '💰', color: '#feca57' },
+          'tech_outage': { icon: '💻', color: '#5f27cd' },
+          'cyber_attack': { icon: '🛡️', color: '#ee5a6f' },
+          'censorship': { icon: '🚫', color: '#c44569' },
+          'sports_event': { icon: '⚽', color: '#00d2d3' },
+          'election': { icon: '🗳️', color: '#3742fa' },
+          'pandemic': { icon: '🦠', color: '#ff6348' },
+          'infrastructure_damage': { icon: '🏗️', color: '#747d8c' },
+          'competitor_game': { icon: '🎯', color: '#ff9ff3' },
+          'social_trend': { icon: '📱', color: '#54a0ff' },
+          'major_event': { icon: '🎪', color: '#ff6b81' },
+          'other': { icon: '📋', color: '#95a5a6' }
+        };
+        
         newsList.innerHTML = newsArray.map(news => {
-          // 국가 태그 색상 (상승/하락에 따라)
-          const countryTagColor = news.changeType === 'riser' ? '#00ff00' : 
-                                 news.changeType === 'faller' ? '#ff4d4d' : '#238636';
-          const countryTagBg = news.changeType === 'riser' ? 'rgba(0,255,0,0.2)' : 
-                              news.changeType === 'faller' ? 'rgba(255,77,77,0.2)' : 'rgba(35,134,54,0.2)';
+          const catInfo = categoryInfo[news.category] || categoryInfo['other'];
           
           return `
           <div class="news-item">
             <div class="news-content">
-              <div class="news-title">
-                <a href="${news.url}" target="_blank" rel="noopener noreferrer">${news.title}</a>
-                ${news.relatedCountry ? `<span style="margin-left:8px;padding:2px 8px;background:${countryTagBg};border:1px solid ${countryTagColor};border-radius:4px;font-size:11px;color:${countryTagColor}">${news.relatedCountry} ${news.changeType === 'riser' ? '📈' : news.changeType === 'faller' ? '📉' : ''}</span>` : ''}
+              <div class="news-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <a href="${news.url}" target="_blank" rel="noopener noreferrer" style="flex:1;min-width:200px">${news.title}</a>
+                <span style="padding:4px 10px;background:${catInfo.color}20;border:1px solid ${catInfo.color};border-radius:4px;font-size:11px;color:${catInfo.color};white-space:nowrap">
+                  ${catInfo.icon} ${news.category.replace('_', ' ')}
+                </span>
+                ${news.country ? `<span style="padding:4px 10px;background:rgba(35,134,54,0.1);border:1px solid #238636;border-radius:4px;font-size:11px;color:#238636;white-space:nowrap">🌍 ${news.country}</span>` : ''}
               </div>
               <div class="news-meta">
                 <span class="news-source">${news.source}</span>
                 <span class="news-date">${news.date}</span>
+                ${news.continent ? `<span style="color:var(--muted);font-size:11px">${news.continent}</span>` : ''}
               </div>
-              <div class="news-snippet">${news.snippet}</div>
-              ${news.reason ? `<div style="margin-top:8px;padding:8px;background:rgba(35,134,54,0.1);border-left:3px solid #238636;border-radius:4px;font-size:12px;color:var(--muted)"><strong style="color:#238636">💡 원인 분석:</strong> ${news.reason}</div>` : ''}
+              <div class="news-snippet">${news.summary}</div>
+              ${news.traffic_impact ? `<div style="margin-top:8px;padding:8px;background:rgba(35,134,54,0.1);border-left:3px solid #238636;border-radius:4px;font-size:12px;color:var(--muted)"><strong style="color:#238636">💡 트래픽 영향:</strong> ${news.traffic_impact}</div>` : ''}
             </div>
           </div>
         `;
         }).join('');
       } else {
-        renderSampleNews();
+        newsList.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">📰</div>
+            <div>해당 카테고리의 뉴스가 없습니다.</div>
+            <div style="margin-top:12px;font-size:12px;color:var(--muted)">다른 카테고리를 선택해보세요.</div>
+          </div>
+        `;
       }
     }
 
@@ -1864,7 +1993,7 @@
     }
 
     document.getElementById('btnRefreshNews')?.addEventListener('click', () => {
-      loadNewsForRisersFallers(currentData);
+      loadNewsFromCSV();
     });
 
     // Update tabs when data changes
@@ -1879,7 +2008,7 @@
         updateCountrySelect(data);
       }
       if(document.getElementById('tab-news').classList.contains('active')){
-        loadNewsForRisersFallers(data);
+        loadNewsFromCSV();
       }
     };
 
