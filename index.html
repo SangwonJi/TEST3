@@ -59,6 +59,20 @@
     .country-detail-container{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:20px;margin-top:20px}
     .country-select-wrapper{margin-bottom:20px}
     .country-select-wrapper select{width:100%;padding:10px 12px;border:1px solid var(--border);background:var(--bg);color:#fff;border-radius:6px;font-size:14px}
+    .country-search-wrapper{position:relative;margin-bottom:20px}
+    .country-search-input{width:100%;padding:12px 40px 12px 16px;border:1px solid var(--border);background:var(--bg);color:#fff;border-radius:6px;font-size:14px}
+    .country-search-input:focus{outline:none;border-color:#238636}
+    .country-search-icon{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+    .country-autocomplete{position:absolute;top:100%;left:0;right:0;background:var(--panel);border:1px solid var(--border);border-radius:6px;max-height:300px;overflow-y:auto;z-index:1000;margin-top:4px;display:none}
+    .country-autocomplete-item{padding:12px 16px;cursor:pointer;border-bottom:1px solid var(--border);transition:background 0.2s}
+    .country-autocomplete-item:hover{background:rgba(255,255,255,0.05)}
+    .country-autocomplete-item:last-child{border-bottom:none}
+    .country-autocomplete-item.highlight{background:rgba(35,134,54,0.2);border-left:3px solid #238636}
+    .quick-select-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-bottom:20px}
+    .quick-select-btn{padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:#fff;font-size:13px;cursor:pointer;transition:all 0.2s;text-align:center}
+    .quick-select-btn:hover{background:rgba(35,134,54,0.2);border-color:#238636}
+    .quick-select-section{margin-bottom:20px}
+    .quick-select-title{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;font-weight:600}
     .country-detail-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:20px}
     .detail-stat-item{background:linear-gradient(135deg,#161b22,#1c2128);border:1px solid var(--border);border-radius:8px;padding:16px}
     .detail-stat-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px}
@@ -234,12 +248,27 @@
       <!-- Country Detail Tab -->
       <div class="tab-content" id="tab-country-detail">
         <div class="country-detail-container">
-          <div class="country-select-wrapper">
+          <!-- 빠른 선택: Top 10 국가 -->
+          <div class="quick-select-section">
+            <div class="quick-select-title">🚀 빠른 선택 (Traffic Top 10)</div>
+            <div class="quick-select-grid" id="quickSelectTop10"></div>
+          </div>
+          
+          <!-- 검색 기능 -->
+          <div class="country-search-wrapper">
+            <input type="text" id="countrySearch" class="country-search-input" placeholder="🔍 국가명 검색 (예: USA, China, Korea...)"/>
+            <div class="country-search-icon">🔍</div>
+            <div class="country-autocomplete" id="countryAutocomplete"></div>
+          </div>
+          
+          <!-- 드롭다운 (기존 방식, 숨김 처리) -->
+          <div class="country-select-wrapper" style="display:none">
             <label style="display:block;margin-bottom:8px;color:var(--muted);font-size:14px;font-weight:600">국가 선택:</label>
             <select id="countrySelect">
               <option value="">국가를 선택하세요...</option>
             </select>
           </div>
+          
           <div id="countryDetailContent" style="display:none">
             <div class="country-detail-stats" id="countryDetailStats"></div>
             <div class="traffic-chart-container">
@@ -248,7 +277,8 @@
           </div>
           <div id="countryDetailEmpty" class="empty-state">
             <div class="empty-state-icon">🌍</div>
-            <div>국가를 선택하면 상세 정보를 확인할 수 있습니다.</div>
+            <div>국가를 검색하거나 빠른 선택 버튼을 클릭하세요.</div>
+            <div style="margin-top:8px;font-size:12px;color:var(--muted)">💡 Treemap이나 Risers/Fallers에서 국가를 클릭해도 자동으로 이동합니다.</div>
           </div>
         </div>
       </div>
@@ -1027,7 +1057,7 @@
       const risersList = document.getElementById('risersList');
       if(risers.length > 0){
         risersList.innerHTML = risers.map(item => `
-          <div class="country-item">
+          <div class="country-item" style="cursor:pointer" onclick="selectCountryFromExternal('${item.country}')" title="클릭하여 상세 정보 보기">
             <div>
               <div class="country-name">${item.country}</div>
               <div style="font-size:12px;color:var(--muted);margin-top:4px">${(item.traffic/1e6).toFixed(2)}M</div>
@@ -1049,7 +1079,7 @@
       const fallersList = document.getElementById('fallersList');
       if(fallers.length > 0){
         fallersList.innerHTML = fallers.map(item => `
-          <div class="country-item">
+          <div class="country-item" style="cursor:pointer" onclick="selectCountryFromExternal('${item.country}')" title="클릭하여 상세 정보 보기">
             <div>
               <div class="country-name">${item.country}</div>
               <div style="font-size:12px;color:var(--muted);margin-top:4px">${(item.traffic/1e6).toFixed(2)}M</div>
@@ -1076,39 +1106,174 @@
     });
 
     // ---------- Country Detail Tab ----------
+    let allCountriesList = []; // 검색용 국가 목록
+    let countryTrafficMap = {}; // 국가별 트래픽 맵 (빠른 선택용)
+    
     function updateCountrySelect(data){
       if(!data || !data.Country) return;
       
+      allCountriesList = data.Country.sort();
+      
+      // 드롭다운 업데이트 (숨김 처리되어 있지만 호환성 유지)
       const select = document.getElementById('countrySelect');
       select.innerHTML = '<option value="">국가를 선택하세요...</option>';
-      
-      data.Country.sort().forEach(country => {
+      allCountriesList.forEach(country => {
         const option = document.createElement('option');
         option.value = country;
         option.textContent = country;
         select.appendChild(option);
       });
       
-      // Remove existing listeners
-      const newSelect = select.cloneNode(true);
-      select.parentNode.replaceChild(newSelect, select);
+      // 트래픽 순위 계산 (빠른 선택용)
+      const stats = calculateStats(data);
+      countryTrafficMap = {};
+      for(let i = 0; i < stats.topCountries.length; i++){
+        countryTrafficMap[stats.topCountries[i]] = {
+          traffic: stats.topRevenue[i],
+          change: stats.topChange[i],
+          rank: i + 1
+        };
+      }
       
-      newSelect.addEventListener('change', (e) => {
-        const selectedCountry = e.target.value;
-        if(selectedCountry){
-          showCountryDetail(data, selectedCountry);
-        } else {
-          document.getElementById('countryDetailContent').style.display = 'none';
-          document.getElementById('countryDetailEmpty').style.display = 'block';
+      // 빠른 선택 Top 10 업데이트
+      updateQuickSelectTop10(data);
+      
+      // 검색 기능 초기화
+      initCountrySearch(data);
+    }
+    
+    // 빠른 선택 Top 10 업데이트
+    function updateQuickSelectTop10(data){
+      const quickSelect = document.getElementById('quickSelectTop10');
+      if(!quickSelect) return;
+      
+      const stats = calculateStats(data);
+      const top10 = stats.topCountries.slice(0, 10);
+      
+      quickSelect.innerHTML = top10.map((country, idx) => {
+        const traffic = stats.topRevenue[idx];
+        const change = stats.topChange[idx];
+        const changeColor = change >= 0 ? '#00ff00' : '#ff4d4d';
+        const changeSign = change >= 0 ? '+' : '';
+        
+        return `
+          <button class="quick-select-btn" data-country="${country}" title="${country}: ${(traffic/1e6).toFixed(2)}M (${changeSign}${change.toFixed(2)}%)">
+            <div style="font-weight:600;margin-bottom:4px">${country}</div>
+            <div style="font-size:11px;color:var(--muted)">#${idx + 1}</div>
+            <div style="font-size:11px;color:${changeColor};margin-top:2px">${changeSign}${change.toFixed(1)}%</div>
+          </button>
+        `;
+      }).join('');
+      
+      // 클릭 이벤트 추가
+      quickSelect.querySelectorAll('.quick-select-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const country = btn.getAttribute('data-country');
+          // Country Detail 탭으로 이동
+          document.querySelector('[data-tab="country-detail"]').click();
+          setTimeout(() => {
+            showCountryDetail(data, country);
+            // 검색 입력창에도 표시
+            document.getElementById('countrySearch').value = country;
+          }, 100);
+        });
+      });
+    }
+    
+    // 검색 기능 초기화
+    function initCountrySearch(data){
+      const searchInput = document.getElementById('countrySearch');
+      const autocomplete = document.getElementById('countryAutocomplete');
+      
+      if(!searchInput || !autocomplete) return;
+      
+      let searchTimeout = null;
+      
+      searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.trim().toLowerCase();
+        
+        clearTimeout(searchTimeout);
+        
+        if(query.length === 0){
+          autocomplete.style.display = 'none';
+          return;
+        }
+        
+        searchTimeout = setTimeout(() => {
+          // 국가 검색
+          const matches = allCountriesList.filter(country => 
+            country.toLowerCase().includes(query)
+          ).slice(0, 10); // 최대 10개
+          
+          if(matches.length > 0){
+            autocomplete.innerHTML = matches.map(country => {
+              const highlight = country.replace(
+                new RegExp(`(${query})`, 'gi'),
+                '<strong style="color:#238636">$1</strong>'
+              );
+              return `
+                <div class="country-autocomplete-item" data-country="${country}">
+                  ${highlight}
+                </div>
+              `;
+            }).join('');
+            
+            autocomplete.style.display = 'block';
+            
+            // 클릭 이벤트
+            autocomplete.querySelectorAll('.country-autocomplete-item').forEach(item => {
+              item.addEventListener('click', () => {
+                const country = item.getAttribute('data-country');
+                searchInput.value = country;
+                autocomplete.style.display = 'none';
+                showCountryDetail(data, country);
+              });
+              
+              item.addEventListener('mouseenter', () => {
+                autocomplete.querySelectorAll('.country-autocomplete-item').forEach(i => i.classList.remove('highlight'));
+                item.classList.add('highlight');
+              });
+            });
+          } else {
+            autocomplete.innerHTML = '<div style="padding:12px;color:var(--muted);text-align:center">검색 결과가 없습니다</div>';
+            autocomplete.style.display = 'block';
+          }
+        }, 200);
+      });
+      
+      // Enter 키로 첫 번째 결과 선택
+      searchInput.addEventListener('keydown', (e) => {
+        if(e.key === 'Enter'){
+          const firstItem = autocomplete.querySelector('.country-autocomplete-item');
+          if(firstItem){
+            firstItem.click();
+          }
+        } else if(e.key === 'Escape'){
+          autocomplete.style.display = 'none';
         }
       });
       
-      // Update comparison type change listener
-      document.getElementById('comparisonType').addEventListener('change', () => {
-        if(newSelect.value){
-          showCountryDetail(data, newSelect.value);
+      // 외부 클릭 시 자동완성 닫기
+      document.addEventListener('click', (e) => {
+        if(!searchInput.contains(e.target) && !autocomplete.contains(e.target)){
+          autocomplete.style.display = 'none';
         }
       });
+    }
+    
+    // 외부에서 국가 선택 함수 (Treemap, Risers/Fallers에서 호출)
+    function selectCountryFromExternal(country){
+      if(!country || !currentData) return;
+      
+      // Country Detail 탭으로 이동
+      const tabButton = document.querySelector('[data-tab="country-detail"]');
+      if(tabButton){
+        tabButton.click();
+        setTimeout(() => {
+          showCountryDetail(currentData, country);
+          document.getElementById('countrySearch').value = country;
+        }, 100);
+      }
     }
 
     function showCountryDetail(data, country){
