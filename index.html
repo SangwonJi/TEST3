@@ -995,7 +995,23 @@
           hoverlabel:{bgcolor:'#161b22',bordercolor:'#30363d',font:{color:'#fff'}}
         };
 
-        Plotly.newPlot('treemap',[trace],layout,{responsive:true}).then(()=>{ if(overlay) overlay.style.display='none'; });
+        Plotly.newPlot('treemap',[trace],layout,{responsive:true}).then(()=>{ 
+          if(overlay) overlay.style.display='none';
+          
+          // Treemap 클릭 이벤트: 국가 클릭 시 Country Detail로 이동
+          const treemapDiv = document.getElementById('treemap');
+          treemapDiv.on('plotly_click', (data) => {
+            if(data.points && data.points.length > 0){
+              const point = data.points[0];
+              const label = point.label;
+              
+              // 국가명 추출 (대륙이 아닌 경우만)
+              if(label && currentData && currentData.Country && currentData.Country.includes(label)){
+                selectCountryFromExternal(label);
+              }
+            }
+          });
+        });
       }, 40);
     }
 
