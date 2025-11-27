@@ -1193,13 +1193,10 @@
               // 탭 콘텐츠가 활성화된 후 렌더링
               setTimeout(() => {
                 const treemapDivId = mainTab === 'revenue' ? 'treemap-revenue' : 'treemap';
-                const treemapContent = document.querySelector(`[data-main-tab="${mainTab}"][data-sub-tab="treemap"]`);
                 
                 // Revenue 탭은 항상 새로 렌더링
                 if(mainTab === 'revenue'){
-                  if(treemapContent && treemapContent.classList.contains('active')){
-                    createTreemap(currentData, mainTab);
-                  }
+                  createTreemap(currentData, mainTab);
                 } else {
                   // Traffic 탭은 이미 렌더링되어 있으면 리사이즈만
                   const treemapDiv = document.getElementById(treemapDivId);
@@ -1240,23 +1237,31 @@
         if(subTab === 'treemap'){
           // 트리맵 탭이 활성화될 때 Plotly 리사이즈 또는 렌더링
           setTimeout(() => {
-            const treemapDivId = mainTab === 'revenue' ? 'treemap-revenue' : 'treemap';
-            const treemapDiv = document.getElementById(treemapDivId);
             // currentData가 없으면 샘플 데이터 생성
             if(!currentData){
               const sampleData = generateSampleData();
               currentData = sampleData;
             }
-            if(treemapDiv && treemapDiv.offsetParent !== null){
-              if(treemapDiv.data && treemapDiv.data.length > 0){
-                Plotly.Plots.resize(treemapDivId);
+            
+            const treemapDivId = mainTab === 'revenue' ? 'treemap-revenue' : 'treemap';
+            
+            // Revenue 탭은 항상 새로 렌더링
+            if(mainTab === 'revenue'){
+              createTreemap(currentData, mainTab);
+            } else {
+              // Traffic 탭은 이미 렌더링되어 있으면 리사이즈만
+              const treemapDiv = document.getElementById(treemapDivId);
+              if(treemapDiv && treemapDiv.offsetParent !== null){
+                if(treemapDiv.data && treemapDiv.data.length > 0){
+                  Plotly.Plots.resize(treemapDivId);
+                } else if(currentData){
+                  createTreemap(currentData, mainTab);
+                }
               } else if(currentData){
                 createTreemap(currentData, mainTab);
               }
-            } else if(currentData){
-              createTreemap(currentData, mainTab);
             }
-          }, 100);
+          }, 150);
         } else if(subTab === 'risers-fallers'){
           updateRisersFallers(currentData);
         } else if(subTab === 'country-detail'){
