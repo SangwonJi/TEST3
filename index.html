@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Traffic by Country — Finviz-style Treemap</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+    :root{
+      --bg:#262931; --panel:#161b22; --muted:#8b949e; --border:#30363d; --tile-gap:#262931; /* 배경 색상 */
+      --green-weak:#39D353; --green-mid:#00C853; --green-strong:#00E676; --green-max:#00FF00;
+      --red-weak:#FF6E6E; --red-mid:#FF3B3B; --red-strong:#FF1A1A; --red-max:#FF0000;
+    }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:linear-gradient(135deg,var(--bg),#161b22);color:#fff;min-height:100vh}
+    .container{max-width:1920px;margin:0 auto;background:var(--bg)}
+    .header{background:linear-gradient(135deg,#161b22,#1c2128);border-bottom:1px solid var(--border);padding:18px 22px}
+    .header h1{font-size:20px;font-weight:700;letter-spacing:-.2px}
+    .header p{font-size:12px;color:var(--muted);margin-top:4px;display:flex;align-items:center;gap:8px}
+    .toolbar,.filter-controls{padding:14px 22px;background:var(--panel);border-bottom:1px solid var(--border);display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    .toolbar input[type="file"], .filter-controls input[type="number"], .filter-controls select{padding:8px 12px;border:1px solid var(--border);background:var(--bg);color:#fff;border-radius:6px}
+    .toolbar button{padding:8px 14px;background:linear-gradient(135deg,#238636,#2ea043);border:none;border-radius:6px;color:#fff;font-weight:600;cursor:pointer}
+    .status-badge{background:linear-gradient(135deg,#238636,#2ea043);padding:6px 10px;border-radius:6px;font-size:12px}
+    .content{padding:18px}
+    .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px}
+    .stat-item{background:linear-gradient(135deg,#161b22,#1c2128);border:1px solid var(--border);border-radius:8px;padding:14px}
+    .stat-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
+    .stat-value{font-size:22px;font-weight:700}
+    .stat-value.positive{color:#00ff00}
+    .stat-value.negative{color:#ff4d4d}
+    #treemap{width:100%;min-height:900px;background:var(--tile-gap);border:1px solid var(--border);border-radius:8px;position:relative;overflow:hidden}
+    .loading-overlay{position:absolute;inset:0;background:rgba(13,17,23,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:1000}
+    .loading-spinner{border:4px solid var(--border);border-top:4px solid #238636;border-radius:50%;width:46px;height:46px;animation:spin 1s linear infinite;margin-bottom:12px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .badge{display:inline-flex;align-items:center;padding:6px 10px;border:1px solid var(--border);border-radius:999px;background:linear-gradient(135deg,#161b22,#1c2128);font-size:12px}
+    .badge[data-tip]{position:relative}
+    .badge[data-tip]:hover::after{content:attr(data-tip);position:absolute;left:50%;transform:translateX(-50%);bottom:calc(100% + 10px);white-space:nowrap;background:#161b22;color:#fff;padding:8px 10px;border-radius:8px;border:1px solid var(--border)}
+    .tabs-container{background:var(--panel);border-bottom:1px solid var(--border);padding:0}
+    .tabs{display:flex;gap:0;overflow-x:auto}
+    .tab-button{padding:14px 24px;background:transparent;border:none;border-bottom:3px solid transparent;color:var(--muted);font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.2s}
+    .tab-button:hover{color:#fff;background:rgba(255,255,255,0.05)}
+    .tab-button.active{color:#fff;border-bottom-color:#238636;background:rgba(35,134,54,0.1)}
+    .tab-content{display:none}
+    .tab-content.active{display:block}
+    .risers-fallers-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px}
+    .risers-section,.fallers-section{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:16px}
+    .section-title{font-size:16px;color:var(--muted);margin-bottom:16px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600}
+    .country-list{max-height:600px;overflow-y:auto}
+    .country-item{display:flex;justify-content:space-between;align-items:center;padding:12px;border-bottom:1px solid var(--border);transition:background 0.2s}
+    .country-item:hover{background:rgba(255,255,255,0.05)}
+    .country-item:last-child{border-bottom:none}
+    .country-name{font-size:14px;font-weight:600;color:#fff}
+    .country-change{font-size:14px;font-weight:600}
+    .country-change.positive{color:#00ff00}
+    .country-change.negative{color:#ff4d4d}
+    .country-detail-container{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:20px;margin-top:20px}
+    .country-select-wrapper{margin-bottom:20px}
+    .country-select-wrapper select{width:100%;padding:10px 12px;border:1px solid var(--border);background:var(--bg);color:#fff;border-radius:6px;font-size:14px}
+    .country-detail-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:20px}
+    .detail-stat-item{background:linear-gradient(135deg,#161b22,#1c2128);border:1px solid var(--border);border-radius:8px;padding:16px}
+    .detail-stat-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px}
+    .detail-stat-value{font-size:24px;font-weight:700;color:#fff}
+    .traffic-chart-container{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:16px;margin-top:20px;min-height:400px}
+    .news-container{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:20px;margin-top:20px}
+    .news-item{display:flex;gap:16px;padding:16px;border-bottom:1px solid var(--border);transition:background 0.2s}
+    .news-item:hover{background:rgba(255,255,255,0.05)}
+    .news-item:last-child{border-bottom:none}
+    .news-content{flex:1}
+    .news-title{font-size:16px;font-weight:600;color:#fff;margin-bottom:8px}
+    .news-title a{color:#fff;text-decoration:none}
+    .news-title a:hover{color:#238636}
+    .news-meta{font-size:12px;color:var(--muted);display:flex;gap:12px;align-items:center}
+    .news-source{color:#238636;font-weight:600}
+    .news-date{color:var(--muted)}
+    .news-snippet{font-size:14px;color:var(--muted);margin-top:8px;line-height:1.5}
+    .empty-state{text-align:center;padding:60px 20px;color:var(--muted)}
+    .empty-state-icon{font-size:48px;margin-bottom:16px;opacity:0.5}
+    @media (max-width:768px){.header{padding:14px}.content{padding:12px}.risers-fallers-grid{grid-template-columns:1fr}.tabs{overflow-x:auto}.tab-button{padding:12px 16px;font-size:13px}}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+      <h1>🌍 Traffic by Country</h1>
+        </div>
+        
+        <div class="toolbar">
+      <input type="file" id="csvFile" accept=".csv"/>
+      <button id="btnLoad">📁 Load CSV</button>
+      <div class="status-badge" id="status">Sample Data (250 Countries)</div>
+    </div>
+
+    <div class="tabs-container">
+      <div class="tabs">
+        <button class="tab-button active" data-tab="treemap">📊 Treemap</button>
+        <button class="tab-button" data-tab="risers-fallers">📈 Risers/Fallers</button>
+        <button class="tab-button" data-tab="country-detail">🌍 Country Detail</button>
+        <button class="tab-button" data-tab="news">📰 News & Headlines</button>
+      </div>
+    </div>
+
+    <div class="filter-controls">
+      <label><strong>Show Top:</strong> <input type="number" id="topCount" value="180" min="10" max="250"/></label>
+      <label><strong>Sort By:</strong>
+        <select id="sortBy">
+          <option value="revenue" selected>Total Traffic</option>
+          <option value="change_desc">+ 변화량 큰 순</option>
+          <option value="change_asc">- 변화량 큰 순</option>
+        </select>
+      </label>
+      <label><input type="checkbox" id="groupByContinent" checked/> <strong>Group by Sector (Continent)</strong></label>
+      <label style="margin-top:8px"><strong>Comparison:</strong>
+        <select id="comparisonType" style="padding:6px 10px;border:1px solid var(--border);background:var(--bg);color:#fff;border-radius:6px;margin-left:8px;font-size:13px">
+          <option value="DoD" selected>DoD (Day over Day)</option>
+          <option value="WoW">WoW (Week over Week)</option>
+          <option value="MoM">MoM (Month over Month)</option>
+          <option value="YoY">YoY (Year over Year)</option>
+        </select>
+      </label>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:8px;padding-top:12px;border-top:1px solid var(--border)">
+        <label><strong>Date Range:</strong> 
+          <input type="date" id="startDate" style="padding:6px 10px;border:1px solid var(--border);background:var(--bg);color:#fff;border-radius:6px;margin-left:8px"/>
+        </label>
+        <label><strong>~</strong> 
+          <input type="date" id="endDate" style="padding:6px 10px;border:1px solid var(--border);background:var(--bg);color:#fff;border-radius:6px;margin-left:8px"/>
+        </label>
+        <button id="btnApplyDateRange" style="padding:6px 12px;background:linear-gradient(135deg,#238636,#2ea043);border:none;border-radius:6px;color:#fff;font-weight:600;cursor:pointer;font-size:12px">Apply</button>
+        <button id="btnClearDateRange" style="padding:6px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:#fff;font-weight:600;cursor:pointer;font-size:12px">Clear</button>
+      </div>
+        </div>
+        
+        <div class="content">
+      <!-- Treemap Tab -->
+      <div class="tab-content active" id="tab-treemap">
+        <div class="stats-grid" id="stats"></div>
+        <div id="treemap">
+          <div class="loading-overlay" id="loadingOverlay">
+            <div class="loading-spinner"></div>
+            <div class="loading-text" style="color:var(--muted)">데이터를 생성하고 있습니다...</div>
+          </div>
+        </div>
+        <div class="color-palette" style="margin-top:20px;padding:16px;background:var(--panel);border:1px solid var(--border);border-radius:8px">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600">Color Palette</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <div class="palette-item" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg);border-radius:6px;border:1px solid var(--border)">
+              <div style="width:24px;height:24px;background:#f63538;border-radius:4px;border:1px solid rgba(255,255,255,0.1)"></div>
+              <span style="color:#fff;font-size:13px;font-weight:600">-3%</span>
+            </div>
+            <div class="palette-item" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg);border-radius:6px;border:1px solid var(--border)">
+              <div style="width:24px;height:24px;background:#bf4045;border-radius:4px;border:1px solid rgba(255,255,255,0.1)"></div>
+              <span style="color:#fff;font-size:13px;font-weight:600">-2%</span>
+            </div>
+            <div class="palette-item" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg);border-radius:6px;border:1px solid var(--border)">
+              <div style="width:24px;height:24px;background:#8b444e;border-radius:4px;border:1px solid rgba(255,255,255,0.1)"></div>
+              <span style="color:#fff;font-size:13px;font-weight:600">-1%</span>
+            </div>
+            <div class="palette-item" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg);border-radius:6px;border:1px solid var(--border)">
+              <div style="width:24px;height:24px;background:#414554;border-radius:4px;border:1px solid rgba(255,255,255,0.1)"></div>
+              <span style="color:#fff;font-size:13px;font-weight:600">0%</span>
+            </div>
+            <div class="palette-item" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg);border-radius:6px;border:1px solid var(--border)">
+              <div style="width:24px;height:24px;background:#3e7c55;border-radius:4px;border:1px solid rgba(255,255,255,0.1)"></div>
+              <span style="color:#fff;font-size:13px;font-weight:600">+1%</span>
+            </div>
+            <div class="palette-item" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg);border-radius:6px;border:1px solid var(--border)">
+              <div style="width:24px;height:24px;background:#2f9e4f;border-radius:4px;border:1px solid rgba(255,255,255,0.1)"></div>
+              <span style="color:#fff;font-size:13px;font-weight:600">+2%</span>
+            </div>
+            <div class="palette-item" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg);border-radius:6px;border:1px solid var(--border)">
+              <div style="width:24px;height:24px;background:#30cc5a;border-radius:4px;border:1px solid rgba(255,255,255,0.1)"></div>
+              <span style="color:#fff;font-size:13px;font-weight:600">+3%</span>
+            </div>
+          </div>
+        </div>
+        <div id="trafficTop10" style="margin-top:20px;padding:16px;background:var(--panel);border:1px solid var(--border);border-radius:8px">
+          <div id="trafficTop10Title" style="font-size:16px;color:var(--muted);margin-bottom:16px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600">Traffic Top 10 (DoD 기준)</div>
+          <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse">
+              <thead>
+                <tr style="border-bottom:1px solid var(--border)">
+                  <th style="padding:12px;text-align:left;font-size:14px;color:var(--muted);font-weight:600">Rank</th>
+                  <th style="padding:12px;text-align:left;font-size:14px;color:var(--muted);font-weight:600">Country</th>
+                  <th style="padding:12px;text-align:right;font-size:14px;color:var(--muted);font-weight:600">Traffic</th>
+                  <th style="padding:12px;text-align:right;font-size:14px;color:var(--muted);font-weight:600">Change</th>
+                </tr>
+              </thead>
+              <tbody id="trafficTop10Body">
+                <tr><td colspan="4" style="padding:16px;text-align:center;color:var(--muted);font-size:14px">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Risers/Fallers Tab -->
+      <div class="tab-content" id="tab-risers-fallers">
+        <div class="risers-fallers-grid">
+          <div class="risers-section">
+            <div class="section-title" style="color:#00ff00">📈 Risers (5% 이상 상승)</div>
+            <div class="country-list" id="risersList">
+              <div class="empty-state">
+                <div class="empty-state-icon">📊</div>
+                <div>데이터를 로드하는 중...</div>
+              </div>
+            </div>
+          </div>
+          <div class="fallers-section">
+            <div class="section-title" style="color:#ff4d4d">📉 Fallers (5% 이상 하락)</div>
+            <div class="country-list" id="fallersList">
+              <div class="empty-state">
+                <div class="empty-state-icon">📊</div>
+                <div>데이터를 로드하는 중...</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Country Detail Tab -->
+      <div class="tab-content" id="tab-country-detail">
+        <div class="country-detail-container">
+          <div class="country-select-wrapper">
+            <label style="display:block;margin-bottom:8px;color:var(--muted);font-size:14px;font-weight:600">국가 선택:</label>
+            <select id="countrySelect">
+              <option value="">국가를 선택하세요...</option>
+            </select>
+          </div>
+          <div id="countryDetailContent" style="display:none">
+            <div class="country-detail-stats" id="countryDetailStats"></div>
+            <div class="traffic-chart-container">
+              <div id="countryTrafficChart" style="min-height:400px"></div>
+            </div>
+          </div>
+          <div id="countryDetailEmpty" class="empty-state">
+            <div class="empty-state-icon">🌍</div>
+            <div>국가를 선택하면 상세 정보를 확인할 수 있습니다.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- News & Headlines Tab -->
+      <div class="tab-content" id="tab-news">
+        <div class="news-container">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+            <div class="section-title" style="margin:0">📰 News & Headlines</div>
+            <button id="btnRefreshNews" style="padding:8px 16px;background:linear-gradient(135deg,#238636,#2ea043);border:none;border-radius:6px;color:#fff;font-weight:600;cursor:pointer;font-size:13px">🔄 새로고침</button>
+          </div>
+          <div style="margin-bottom:16px;padding:12px;background:rgba(35,134,54,0.1);border:1px solid rgba(35,134,54,0.3);border-radius:6px;font-size:13px;color:var(--muted)">
+            <strong style="color:#238636">💡 참고:</strong> 상승/하락 국가(5% 이상)에 대한 뉴스를 자동으로 연계합니다. API 연계 후 실제 뉴스가 표시됩니다.
+          </div>
+          <div id="newsList">
+            <div class="empty-state">
+              <div class="empty-state-icon">📰</div>
+              <div>뉴스를 불러오는 중...</div>
+              <div style="margin-top:12px;font-size:12px;color:var(--muted)">API 연계 준비 중입니다.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+        </div>
+        
+    <div class="footer" style="padding:14px;background:var(--panel);border-top:1px solid var(--border);color:var(--muted);text-align:center;font-size:12px">
+      📊 CSV Format: Date,Country,Traffic (날짜는 중구난방 가능, 나라별 자동 피벗) · Hover tiles for details
+        </div>
+    </div>
+
+    <script>
+    // ---------- Mapping: Country → Continent (Sector) ----------
+    const countryToContinent = {
+      'USA':'NORTH AMERICA','Canada':'NORTH AMERICA','Mexico':'NORTH AMERICA','Guatemala':'NORTH AMERICA','Honduras':'NORTH AMERICA','El Salvador':'NORTH AMERICA','Nicaragua':'NORTH AMERICA','Costa Rica':'NORTH AMERICA','Panama':'NORTH AMERICA','Cuba':'NORTH AMERICA','Jamaica':'NORTH AMERICA','Haiti':'NORTH AMERICA','Dominican Republic':'NORTH AMERICA','Trinidad':'NORTH AMERICA','Barbados':'NORTH AMERICA','Bahamas':'NORTH AMERICA','Belize':'NORTH AMERICA',
+      'Brazil':'SOUTH AMERICA','Argentina':'SOUTH AMERICA','Chile':'SOUTH AMERICA','Colombia':'SOUTH AMERICA','Peru':'SOUTH AMERICA','Ecuador':'SOUTH AMERICA','Venezuela':'SOUTH AMERICA','Uruguay':'SOUTH AMERICA','Paraguay':'SOUTH AMERICA','Bolivia':'SOUTH AMERICA','Suriname':'SOUTH AMERICA','Guyana':'SOUTH AMERICA','French Guiana':'SOUTH AMERICA',
+      'Germany':'EUROPE','UK':'EUROPE','France':'EUROPE','Italy':'EUROPE','Spain':'EUROPE','Netherlands':'EUROPE','Poland':'EUROPE','Belgium':'EUROPE','Sweden':'EUROPE','Switzerland':'EUROPE','Greece':'EUROPE','Portugal':'EUROPE','Czech Republic':'EUROPE','Romania':'EUROPE','Hungary':'EUROPE','Bulgaria':'EUROPE','Croatia':'EUROPE','Serbia':'EUROPE','Slovakia':'EUROPE','Slovenia':'EUROPE','Austria':'EUROPE','Denmark':'EUROPE','Norway':'EUROPE','Finland':'EUROPE','Ireland':'EUROPE','Cyprus':'EUROPE','Albania':'EUROPE','Bosnia':'EUROPE','Macedonia':'EUROPE','Montenegro':'EUROPE','Kosovo':'EUROPE','Iceland':'EUROPE','Luxembourg':'EUROPE','Malta':'EUROPE','Monaco':'EUROPE','Andorra':'EUROPE','Liechtenstein':'EUROPE','San Marino':'EUROPE','Vatican':'EUROPE','Jersey':'EUROPE','Guernsey':'EUROPE','Isle of Man':'EUROPE','Faroe Islands':'EUROPE','Greenland':'EUROPE','Svalbard':'EUROPE','Ukraine':'EUROPE','Lithuania':'EUROPE','Latvia':'EUROPE','Estonia':'EUROPE','Moldova':'EUROPE','Belarus':'EUROPE',
+      'China':'ASIA','India':'ASIA','Japan':'ASIA','Korea':'ASIA','South Korea':'ASIA','Indonesia':'ASIA','Thailand':'ASIA','Vietnam':'ASIA','Philippines':'ASIA','Malaysia':'ASIA','Singapore':'ASIA','Pakistan':'ASIA','Bangladesh':'ASIA','Myanmar':'ASIA','Cambodia':'ASIA','Laos':'ASIA','Nepal':'ASIA','Sri Lanka':'ASIA','Afghanistan':'ASIA','Iraq':'ASIA','Iran':'ASIA','Israel':'ASIA','Jordan':'ASIA','Lebanon':'ASIA','Kuwait':'ASIA','Qatar':'ASIA','Oman':'ASIA','Bahrain':'ASIA','Yemen':'ASIA','Syria':'ASIA','Saudi Arabia':'ASIA','UAE':'ASIA','Turkey':'ASIA','Kazakhstan':'ASIA','Uzbekistan':'ASIA','Kyrgyzstan':'ASIA','Tajikistan':'ASIA','Turkmenistan':'ASIA','Azerbaijan':'ASIA','Armenia':'ASIA','Georgia':'ASIA','Mongolia':'ASIA','North Korea':'ASIA','Taiwan':'ASIA','Hong Kong':'ASIA','Macau':'ASIA','Brunei':'ASIA','East Timor':'ASIA','Bhutan':'ASIA','Maldives':'ASIA',
+      'South Africa':'AFRICA','Egypt':'AFRICA','Nigeria':'AFRICA','Morocco':'AFRICA','Algeria':'AFRICA','Tunisia':'AFRICA','Libya':'AFRICA','Sudan':'AFRICA','Ethiopia':'AFRICA','Kenya':'AFRICA','Tanzania':'AFRICA','Uganda':'AFRICA','Ghana':'AFRICA','Ivory Coast':'AFRICA','Senegal':'AFRICA','Cameroon':'AFRICA','Angola':'AFRICA','Mozambique':'AFRICA','Madagascar':'AFRICA','Zimbabwe':'AFRICA','Zambia':'AFRICA','Malawi':'AFRICA','Rwanda':'AFRICA','Burundi':'AFRICA','Somalia':'AFRICA','Djibouti':'AFRICA','Eritrea':'AFRICA','Mauritania':'AFRICA','Mali':'AFRICA','Burkina Faso':'AFRICA','Niger':'AFRICA','Chad':'AFRICA','Central African Republic':'AFRICA','Congo':'AFRICA','DR Congo':'AFRICA','Gabon':'AFRICA','Equatorial Guinea':'AFRICA','Sao Tome':'AFRICA','Guinea':'AFRICA','Sierra Leone':'AFRICA','Liberia':'AFRICA','Togo':'AFRICA','Benin':'AFRICA','Mauritius':'AFRICA','Seychelles':'AFRICA','Comoros':'AFRICA','Cape Verde':'AFRICA','Guinea-Bissau':'AFRICA','Gambia':'AFRICA','Lesotho':'AFRICA','Swaziland':'AFRICA','Botswana':'AFRICA','Namibia':'AFRICA',
+      'Australia':'OCEANIA','New Zealand':'OCEANIA','Papua New Guinea':'OCEANIA','Fiji':'OCEANIA','Solomon Islands':'OCEANIA','Vanuatu':'OCEANIA','Samoa':'OCEANIA','Tonga':'OCEANIA','Palau':'OCEANIA','Micronesia':'OCEANIA','Marshall Islands':'OCEANIA','Norfolk Island':'OCEANIA','Christmas Island':'OCEANIA','Cocos Islands':'OCEANIA',
+      'Russia':'RUSSIA & CIS'
+    };
+
+    const getContinent = (c)=> countryToContinent[c] || 'OTHER';
+
+    // ---------- 새로운 색상 팔레트 (변화량에 따라 보간) ----------
+    function hexToRgb(hex) {
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+      } : null;
+    }
+    
+    function rgbToHex(r, g, b) {
+      return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+    }
+    
+    function interpolateColor(color1, color2, factor) {
+      const rgb1 = hexToRgb(color1);
+      const rgb2 = hexToRgb(color2);
+      if (!rgb1 || !rgb2) return color1;
+      
+      const r = Math.round(rgb1.r + (rgb2.r - rgb1.r) * factor);
+      const g = Math.round(rgb1.g + (rgb2.g - rgb1.g) * factor);
+      const b = Math.round(rgb1.b + (rgb2.b - rgb1.b) * factor);
+      
+      return rgbToHex(r, g, b);
+    }
+    
+    function colorFromChange(change, intensity = 1) {
+      // 색상 정의
+      const colors = {
+        pos3: '#30cc5a',  // +3%
+        pos2: '#2f9e4f',  // +2%
+        pos1: '#3e7c55',  // +1%
+        zero: '#414554',  // 0%
+        neg1: '#8b444e',  // -1%
+        neg2: '#bf4045',  // -2%
+        neg3: '#f63538'   // -3%
+      };
+      
+      // 변화율에 따라 색상 보간
+      if (change >= 3) {
+        return colors.pos3;
+      } else if (change >= 2) {
+        const factor = (change - 2) / 1; // 2~3 사이의 비율
+        return interpolateColor(colors.pos2, colors.pos3, factor);
+      } else if (change >= 1) {
+        const factor = (change - 1) / 1; // 1~2 사이의 비율
+        return interpolateColor(colors.pos1, colors.pos2, factor);
+      } else if (change > 0) {
+        const factor = change / 1; // 0~1 사이의 비율
+        return interpolateColor(colors.zero, colors.pos1, factor);
+      } else if (change === 0 || (change > -0.5 && change < 0.5)) {
+        return colors.zero;
+      } else if (change > -1) {
+        const factor = Math.abs(change) / 1; // 0~1 사이의 비율
+        return interpolateColor(colors.zero, colors.neg1, factor);
+      } else if (change > -2) {
+        const factor = (Math.abs(change) - 1) / 1; // 1~2 사이의 비율
+        return interpolateColor(colors.neg1, colors.neg2, factor);
+      } else if (change > -3) {
+        const factor = (Math.abs(change) - 2) / 1; // 2~3 사이의 비율
+        return interpolateColor(colors.neg2, colors.neg3, factor);
+      } else {
+        return colors.neg3;
+      }
+    }
+
+    // ---------- Sample data ----------
+    function generateSampleData(){
+      const countries = [];
+      const names=['Vatican','Saint Pierre and Miquelon','Montserrat','福克兰群岛','San Marino','Isle of Man','Niue','Cuba','Faroe Islands','Dutch Caribbean','Jersey','Bermuda','Sao Tome and Principe','Gibraltar','Andorra','Liechtenstein','Guinea-Bissau','Turks and Caicos Islands','Saint Martin','Sint Maarten','Anguilla','Central Africa','Equatorial Guinea','根西岛','Aruba','Burundi','United States Virgin Islands','Saint Kitts and Nevis','Nauru','Bahamas','Cayman Islands','Lesotho','Northern Mariana Islands','Cape Verde','Guadeloupe','Palau','Antigua and Barbuda','Swaziland','Monaco','other','Martinique','Iceland','Cook Islands','Reunion','Liberia','New Caledonia','Gambia','Sierra Leone','Guinea','EU','French Guiana','Rwanda','Grenada','Togo','Greenland','Benin','Haiti','Angola','South Sudan','Mozambique','Saint Vincent and the Grenadines','Macao','Malta','Namibia','Burkina Faso','Gabon','Barbados','Guam','Seychelles','Djibouti','Marshall Islands','Mali','Cameroon','Belize','Botswana','Trinidad and Tobago','Zimbabwe','Niger','Estonia','Malawi','Papua New Guinea','Puerto Rico','Fiji Islands','Zambia','Panama','Côte dIvoire','Senegal','Federated States of Micronesia','Luxembourg','Costa Rica','Slovenia','Ghana','Nicaragua','Bolivia','El Salvador','Paraguay','Uganda','Curacao','Uruguay','Korea','French Polynesia','Japan','Latvia','Honduras','Ireland','Surinam','Tonga','Solomon Islands','Montenegro','Denmark','Portugal','Dominica','Norway','Brunei','Croatia','Cyprus','Tunisia','Slovakia','Lithuania','Guatemala','Jamaica','Macedonia','Laos','new Zealand','Ecuador','Maldives','Venezuela','Peru','Tanzania','Chad','Guyana','Finland','Mauritania','Nigeria','Switzerland','Madagascar','China','Belgium','Bosnia and Herzegovina','Bahrain','Austria','East Timor','Albania','Bhutan','Colombia','Chile','Greece','Hungary','Sweden','Czech','Argentina','Tajikistan','Serbia','Sri Lanka','Spain','Moldova','Kenya','Poland','Ethiopia','Italy','Sudan','Australia','Mauritius','Armenia','South Africa','Kuwait','Oman','Qatar','Cambodia','Bulgaria','Iran','Morocco','Kyrgyzstan','Mongolia','Canada','Romania','Georgia','Belarus','Netherlands','Taiwan','Somalia','Israel','Turkmenistan','Mexico','Singapore','Kazakhstan','Brazil','Syria','United Arab Emirates','Palestine','United Kingdom','Afghanistan','Jordan','Yemen','France','Algeria','Undefined','Nepal','Lebanon','Bengal','Philippines','Azerbaijan','Libya','Hong Kong','Thailand','Malaysia','Myanmar','Ukraine','Vietnam','Germany','United States','Saudi Arabia','Uzbekistan','Indonesia','Egypt','Russia','Pakistan','Iraq','Turkey'];
+      let seed=12345; function rnd(){ seed=(seed*9301+49297)%233280; return seed/233280; }
+      
+      // 7일 샘플 데이터 생성
+      const allDates = [];
+      const today = new Date();
+      for(let d=6; d>=0; d--){
+        const date = new Date(today);
+        date.setDate(date.getDate() - d);
+        allDates.push(`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`);
+      }
+      
+      const trafficByDate = {};
+      allDates.forEach(date => { trafficByDate[date] = []; }); // 모든 날짜 초기화
+      
+      for(let i=0;i<250;i++){
+        const name = i<names.length?names[i]:`Country${i+1}`;
+        countries.push(name);
+        const base=500000*Math.pow(0.92,i);
+        const v=base*0.1*(rnd()-0.5);
+        let prev=Math.max(1000,Math.round(base+v));
+        
+        // 각 날짜별 트래픽 생성
+        allDates.forEach((date, idx) => {
+          if(idx === 0){
+            trafficByDate[date].push(prev);
+          } else {
+            prev = Math.round(prev*(1+(rnd()*0.1-0.05)));
+            trafficByDate[date].push(prev);
+          }
+        });
+      }
+      
+      const lastDate = allDates[allDates.length - 1];
+      return {Country:countries, allDates:allDates, trafficByDate:trafficByDate, lastDate:lastDate};
+    }
+
+    const sampleData = generateSampleData();
+    let currentData = sampleData;
+    let rawCsvRows = null; // 원본 CSV 데이터 저장
+
+    // ---------- CSV load ----------
+    document.getElementById('btnLoad').addEventListener('click', ()=>{
+      const f=document.getElementById('csvFile').files[0];
+      if(!f){ alert('Please select a file.'); return; }
+      Papa.parse(f,{header:true,skipEmptyLines:true,
+        complete:({data})=>{ 
+          rawCsvRows = data; // 원본 데이터 저장
+          const p=processData(data); 
+          if(p){ 
+            currentData=p; 
+            document.getElementById('status').textContent='CSV Loaded'; 
+            createTreemap(currentData);
+            // Update other tabs if they are active
+            if(document.getElementById('tab-risers-fallers').classList.contains('active')){
+              updateRisersFallers(currentData);
+            }
+            if(document.getElementById('tab-country-detail').classList.contains('active')){
+              updateCountrySelect(currentData);
+            }
+            if(document.getElementById('tab-news').classList.contains('active')){
+              loadNewsForRisersFallers(currentData);
+            }
+          } 
+        },
+        error:(e)=> alert('Error reading CSV: '+e)
+      });
+    });
+    
+    // 날짜 범위 필터 적용
+    document.getElementById('btnApplyDateRange').addEventListener('click', ()=>{
+      if(!rawCsvRows || rawCsvRows.length === 0){
+        alert('Please load CSV file first.');
+        return;
+      }
+      const startDate = document.getElementById('startDate').value;
+      const endDate = document.getElementById('endDate').value;
+      
+      if(!startDate || !endDate){
+        alert('Please select both start and end dates.');
+        return;
+      }
+      
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999); // 종료일 포함
+      
+      if(start > end){
+        alert('Start date must be before end date.');
+        return;
+      }
+      
+      // 날짜 범위 필터링
+      const firstRow = rawCsvRows[0] || {};
+      const allKeys = Object.keys(firstRow);
+      const findColumn = (keys, possibleNames) => {
+        const lowerKeys = keys.map(k => k.toLowerCase());
+        for(const name of possibleNames){
+          const lowerName = name.toLowerCase();
+          const idx = lowerKeys.indexOf(lowerName);
+          if(idx !== -1) return keys[idx];
+        }
+        return null;
+      };
+      
+      const dateCol = findColumn(allKeys, ['Date', 'date', '날짜', 'Date']);
+      
+      if(!dateCol){
+        alert('Date column not found. Date range filter only works with Date,Country,Traffic format.');
+        return;
+      }
+      
+      // 날짜 정규화 함수
+      const normalizeDate = (dateStr) => {
+        let normalized = dateStr.toString().trim();
+        normalized = normalized.replace(/\./g, '-').replace(/\s+/g, '');
+        normalized = normalized.replace(/-+/g, '-');
+        normalized = normalized.replace(/^-+|-+$/g, '');
+        
+        const parts = normalized.split('-');
+        if(parts.length >= 3){
+          const year = parseInt(parts[0]);
+          const month = parseInt(parts[1]);
+          const day = parseInt(parts[2]);
+          if(!isNaN(year) && !isNaN(month) && !isNaN(day)){
+            return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          }
+        }
+        return normalized;
+      };
+      
+      // 날짜 범위 내 데이터만 필터링
+      const filteredRows = rawCsvRows.filter(r => {
+        if(!r[dateCol]) return false;
+        const dateStr = normalizeDate(r[dateCol]);
+        const rowDate = new Date(dateStr);
+        if(isNaN(rowDate)) return false;
+        return rowDate >= start && rowDate <= end;
+      });
+      
+      if(filteredRows.length === 0){
+        alert('No data found in the selected date range.');
+        return;
+      }
+      
+      const p = processData(filteredRows);
+      if(p){
+        currentData = p;
+        document.getElementById('status').textContent = `CSV Loaded (${filteredRows.length} rows, ${startDate} ~ ${endDate})`;
+        createTreemap(currentData);
+        // Update other tabs if they are active
+        if(document.getElementById('tab-risers-fallers').classList.contains('active')){
+          updateRisersFallers(currentData);
+        }
+        if(document.getElementById('tab-country-detail').classList.contains('active')){
+          updateCountrySelect(currentData);
+        }
+        if(document.getElementById('tab-news').classList.contains('active')){
+          loadNewsForRisersFallers(currentData);
+        }
+      }
+    });
+    
+    // 날짜 범위 필터 초기화
+    document.getElementById('btnClearDateRange').addEventListener('click', ()=>{
+      document.getElementById('startDate').value = '';
+      document.getElementById('endDate').value = '';
+      if(rawCsvRows && rawCsvRows.length > 0){
+        const p = processData(rawCsvRows);
+        if(p){
+          currentData = p;
+          document.getElementById('status').textContent = 'CSV Loaded';
+          createTreemap(currentData);
+          // Update other tabs if they are active
+          if(document.getElementById('tab-risers-fallers').classList.contains('active')){
+            updateRisersFallers(currentData);
+          }
+          if(document.getElementById('tab-country-detail').classList.contains('active')){
+            updateCountrySelect(currentData);
+          }
+        }
+      }
+    });
+
+    function processData(rows){
+      try{
+        // Date,Country,Traffic (long format) - 대소문자 구분 없이 찾기
+        // 날짜가 중구난방으로 있어도 나라별로 피벗하여 처리
+        const firstRow = rows[0] || {};
+        const allKeys = Object.keys(firstRow);
+        
+        // 컬럼명 찾기 (대소문자 구분 없이)
+        const findColumn = (keys, possibleNames) => {
+          const lowerKeys = keys.map(k => k.toLowerCase());
+          for(const name of possibleNames){
+            const lowerName = name.toLowerCase();
+            const idx = lowerKeys.indexOf(lowerName);
+            if(idx !== -1) return keys[idx];
+          }
+          return null;
+        };
+        
+        const dateCol = findColumn(allKeys, ['Date', 'date', '날짜', 'Date']);
+        const countryCol = findColumn(allKeys, ['Country', 'country', '국가', 'Country']);
+        const trafficCol = findColumn(allKeys, ['Traffic', 'traffic', '트래픽', 'DAU', 'dau', 'Traffic']);
+        
+        if(dateCol && countryCol && trafficCol){
+          
+          // 국가별로 데이터 그룹화
+          const countryDataMap = {};
+          
+          // 날짜 정규화 함수
+          const normalizeDate = (dateStr) => {
+            let normalized = dateStr.toString().trim();
+            normalized = normalized.replace(/\./g, '-').replace(/\s+/g, '');
+            normalized = normalized.replace(/-+/g, '-');
+            normalized = normalized.replace(/^-+|-+$/g, '');
+            
+            const parts = normalized.split('-');
+            if(parts.length >= 3){
+              const year = parseInt(parts[0]);
+              const month = parseInt(parts[1]);
+              const day = parseInt(parts[2]);
+              if(!isNaN(year) && !isNaN(month) && !isNaN(day)){
+                return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+              }
+            }
+            return normalized;
+          };
+          
+          rows.forEach(r=>{
+            if(r[dateCol] && r[countryCol] && r[trafficCol]){
+              const dateStr = normalizeDate(r[dateCol]);
+              const country = r[countryCol].toString().trim();
+              const traffic = +r[trafficCol];
+              
+              if(!countryDataMap[country]) countryDataMap[country] = {};
+              countryDataMap[country][dateStr] = traffic;
+            }
+          });
+          
+          // 각 국가별로 날짜 정렬하고 모든 날짜 데이터 사용
+          const countries = Object.keys(countryDataMap);
+          const c = [];
+          const allDates = new Set(); // 모든 날짜 수집
+          
+          countries.forEach(country => {
+            const dates = Object.keys(countryDataMap[country]).sort((a,b)=>{
+              const dateA = new Date(a);
+              const dateB = new Date(b);
+              if(!isNaN(dateA) && !isNaN(dateB)) return dateA - dateB;
+              return a.localeCompare(b);
+            });
+            
+            dates.forEach(d => allDates.add(d));
+            
+            if(dates.length < 2){
+              // 최소 2일 데이터 필요 (DoD 계산을 위해)
+              return; // 이 국가는 스킵
+            }
+            
+            c.push(country);
+          });
+          
+          // 모든 날짜 정렬
+          const sortedDates = Array.from(allDates).sort((a,b)=>{
+            const dateA = new Date(a);
+            const dateB = new Date(b);
+            if(!isNaN(dateA) && !isNaN(dateB)) return dateA - dateB;
+            return a.localeCompare(b);
+          });
+          
+          // 날짜별 트래픽 데이터 구성: trafficByDate[date][countryIndex] = traffic
+          const trafficByDate = {};
+          sortedDates.forEach(date => {
+            trafficByDate[date] = [];
+            c.forEach(country => {
+              trafficByDate[date].push(countryDataMap[country][date] || 0);
+            });
+          });
+          
+          const lastDate = sortedDates.length > 0 ? sortedDates[sortedDates.length - 1] : null;
+          
+          if(!c.length){ alert('No valid data found. Need at least 2 days of data for each country.'); return null; }
+          return {Country:c, allDates:sortedDates, trafficByDate:trafficByDate, lastDate:lastDate};
+        }
+        
+        alert('Unsupported CSV format. Required: Date,Country,Traffic (or 날짜,국가,트래픽)\n날짜는 중구난방으로 있어도 나라별로 자동 피벗하여 처리됩니다.');
+        return null;
+      }catch(e){ alert('Error processing data: '+e); return null; }
+    }
+
+    // ---------- Stats ----------
+    function calculateStats(data){
+      const total=[], change=[], lastDayTraffic=[];
+      const {Country, allDates, trafficByDate} = data;
+      const comparisonType = document.getElementById('comparisonType').value || 'DoD';
+      
+      // 마지막 날짜 찾기
+      const lastDate = allDates.length > 0 ? new Date(allDates[allDates.length - 1]) : null;
+      
+      for(let i=0;i<Country.length;i++){
+        // 마지막 날 트래픽
+        const lastDayValue = (lastDate && trafficByDate[allDates[allDates.length - 1]] && trafficByDate[allDates[allDates.length - 1]][i]) || 0;
+        lastDayTraffic.push(lastDayValue);
+        
+        // 비교 기준일 찾기
+        let compareDate = null;
+        let compareValue = null;
+        
+        if(lastDate && !isNaN(lastDate)){
+          const compareDateObj = new Date(lastDate);
+          
+          switch(comparisonType){
+            case 'DoD':
+              // Day over Day: 첫 날과 마지막 날
+              if(allDates.length > 0){
+                const firstDate = new Date(allDates[0]);
+                if(!isNaN(firstDate) && trafficByDate[allDates[0]] && trafficByDate[allDates[0]][i] !== undefined){
+                  compareValue = trafficByDate[allDates[0]][i];
+                }
+              }
+              break;
+              
+            case 'WoW':
+              // Week over Week: 7일 전
+              compareDateObj.setDate(compareDateObj.getDate() - 7);
+              compareDate = `${compareDateObj.getFullYear()}-${String(compareDateObj.getMonth()+1).padStart(2,'0')}-${String(compareDateObj.getDate()).padStart(2,'0')}`;
+              // 가장 가까운 날짜 찾기 (정확히 7일 전이 없을 수 있음)
+              const wowDates = allDates.filter(d => {
+                const dObj = new Date(d);
+                const diff = Math.abs((dObj - compareDateObj) / (1000 * 60 * 60 * 24));
+                return diff <= 1; // 1일 이내 차이
+              });
+              if(wowDates.length > 0){
+                const closestDate = wowDates.sort((a,b) => {
+                  const aDiff = Math.abs((new Date(a) - compareDateObj) / (1000 * 60 * 60 * 24));
+                  const bDiff = Math.abs((new Date(b) - compareDateObj) / (1000 * 60 * 60 * 24));
+                  return aDiff - bDiff;
+                })[0];
+                if(trafficByDate[closestDate] && trafficByDate[closestDate][i] !== undefined){
+                  compareValue = trafficByDate[closestDate][i];
+                }
+              }
+              break;
+              
+            case 'MoM':
+              // Month over Month: 한 달 전
+              compareDateObj.setMonth(compareDateObj.getMonth() - 1);
+              compareDate = `${compareDateObj.getFullYear()}-${String(compareDateObj.getMonth()+1).padStart(2,'0')}-${String(compareDateObj.getDate()).padStart(2,'0')}`;
+              // 가장 가까운 날짜 찾기
+              const momDates = allDates.filter(d => {
+                const dObj = new Date(d);
+                const diff = Math.abs((dObj - compareDateObj) / (1000 * 60 * 60 * 24));
+                return diff <= 3; // 3일 이내 차이
+              });
+              if(momDates.length > 0){
+                const closestDate = momDates.sort((a,b) => {
+                  const aDiff = Math.abs((new Date(a) - compareDateObj) / (1000 * 60 * 60 * 24));
+                  const bDiff = Math.abs((new Date(b) - compareDateObj) / (1000 * 60 * 60 * 24));
+                  return aDiff - bDiff;
+                })[0];
+                if(trafficByDate[closestDate] && trafficByDate[closestDate][i] !== undefined){
+                  compareValue = trafficByDate[closestDate][i];
+                }
+              }
+              break;
+              
+            case 'YoY':
+              // Year over Year: 1년 전
+              compareDateObj.setFullYear(compareDateObj.getFullYear() - 1);
+              compareDate = `${compareDateObj.getFullYear()}-${String(compareDateObj.getMonth()+1).padStart(2,'0')}-${String(compareDateObj.getDate()).padStart(2,'0')}`;
+              // 가장 가까운 날짜 찾기
+              const yoyDates = allDates.filter(d => {
+                const dObj = new Date(d);
+                const diff = Math.abs((dObj - compareDateObj) / (1000 * 60 * 60 * 24));
+                return diff <= 7; // 7일 이내 차이
+              });
+              if(yoyDates.length > 0){
+                const closestDate = yoyDates.sort((a,b) => {
+                  const aDiff = Math.abs((new Date(a) - compareDateObj) / (1000 * 60 * 60 * 24));
+                  const bDiff = Math.abs((new Date(b) - compareDateObj) / (1000 * 60 * 60 * 24));
+                  return aDiff - bDiff;
+                })[0];
+                if(trafficByDate[closestDate] && trafficByDate[closestDate][i] !== undefined){
+                  compareValue = trafficByDate[closestDate][i];
+                }
+              }
+              break;
+          }
+        }
+        
+        // 변화율 계산
+        if(compareValue !== null && compareValue > 0 && lastDayValue > 0){
+          change.push(((lastDayValue - compareValue) / compareValue) * 100);
+        } else {
+          change.push(0);
+        }
+        
+        // total은 마지막 날 트래픽으로 설정
+        total.push(lastDayValue);
+      }
+      const topN = +document.getElementById('topCount').value || 180;
+      const sortBy = document.getElementById('sortBy').value || 'revenue';
+      let idx;
+      if(sortBy==='revenue'){
+        idx=Array.from({length:data.Country.length},(_,i)=>i).sort((a,b)=> total[b]-total[a]).slice(0,topN);
+      } else if(sortBy==='change_desc'){
+        // + 변화량 큰 순 (변화량 절대값이 큰 순서대로)
+        idx=Array.from({length:data.Country.length},(_,i)=>i)
+          .sort((a,b)=> Math.abs(change[b])-Math.abs(change[a])) // 절대값 기준 큰 순서
+          .slice(0,topN);
+      } else if(sortBy==='change_asc'){
+        // - 변화량 큰 순 (하락폭이 큰 순서대로, 음수 중 절대값 큰 순)
+        idx=Array.from({length:data.Country.length},(_,i)=>i)
+          .filter(i=> change[i] < 0) // 음수만 필터링
+          .sort((a,b)=> Math.abs(change[a])-Math.abs(change[b])) // 절대값 기준 큰 순서 (하락폭 큰 순)
+          .slice(0,topN);
+      }
+
+      const topCountries=idx.map(i=>data.Country[i]);
+      const topRevenue=idx.map(i=>total[i]);
+      const topChange=idx.map(i=>change[i]);
+      const totalSum=topRevenue.reduce((a,b)=>a+b,0);
+      const avgChange=topChange.reduce((a,b)=>a+b,0)/topChange.length;
+      
+      // Max Increase/Decrease 국가 찾기
+      const maxChangeIdx = topChange.indexOf(Math.max(...topChange));
+      const minChangeIdx = topChange.indexOf(Math.min(...topChange));
+      const maxChangeCountry = topCountries[maxChangeIdx] || '';
+      const minChangeCountry = topCountries[minChangeIdx] || '';
+      
+      // Traffic Top 10 (DoD 기준 마지막 날 트래픽)
+      const allCountries = data.Country;
+      const allLastDayTraffic = total;
+      const trafficTop10 = Array.from({length:allCountries.length},(_,i)=>i)
+        .sort((a,b)=> allLastDayTraffic[b]-allLastDayTraffic[a])
+        .slice(0,10)
+        .map(i=>({
+          country: allCountries[i],
+          traffic: allLastDayTraffic[i],
+          change: change[i]
+        }));
+      
+      return {topCountries, topRevenue, topChange, totalSum, avgChange,
+              maxChange:Math.max(...topChange), minChange:Math.min(...topChange),
+              maxChangeCountry, minChangeCountry, trafficTop10};
+    }
+
+    // ---------- Render ----------
+    const overlay=document.getElementById('loadingOverlay');
+    ['topCount','sortBy','groupByContinent','comparisonType'].forEach(id=>{
+      document.getElementById(id).addEventListener('change', ()=> createTreemap(currentData));
+    });
+
+    function createTreemap(data){
+      if(overlay) overlay.style.display='flex';
+      setTimeout(()=>{
+        const stats=calculateStats(data);
+        const topN=+document.getElementById('topCount').value || 180;
+        const groupBy=document.getElementById('groupByContinent').checked;
+
+        // KPIs
+            document.getElementById('stats').innerHTML = `
+          <div class="stat-item"><div class="stat-label">Total Traffic</div><div class="stat-value">${(stats.totalSum/1e6).toFixed(2)}M</div></div>
+          <div class="stat-item"><div class="stat-label">Avg Change</div><div class="stat-value ${stats.avgChange>=0?'positive':'negative'}">${stats.avgChange>=0?'+':''}${stats.avgChange.toFixed(2)}%</div></div>
+          <div class="stat-item"><div class="stat-label">Max Increase</div><div class="stat-value positive">+${stats.maxChange.toFixed(2)}% <span style="font-size:14px;opacity:0.8">(${stats.maxChangeCountry})</span></div></div>
+          <div class="stat-item"><div class="stat-label">Max Decrease</div><div class="stat-value negative">${stats.minChange.toFixed(2)}% <span style="font-size:14px;opacity:0.8">(${stats.minChangeCountry})</span></div></div>`;
+        
+        // Traffic Top 10 표 제목 업데이트 (마지막 날짜 표시: 연도.월.일 형식)
+        const top10Title = document.getElementById('trafficTop10Title');
+        if(top10Title && data.lastDate){
+          const lastDateObj = new Date(data.lastDate);
+          if(!isNaN(lastDateObj)){
+            const year = lastDateObj.getFullYear().toString().slice(-2); // 마지막 2자리
+            const month = String(lastDateObj.getMonth() + 1).padStart(2, '0');
+            const day = String(lastDateObj.getDate()).padStart(2, '0');
+            top10Title.textContent = `Traffic Top 10 (${year}.${month}.${day} 기준)`;
+          } else {
+            // 날짜 파싱 실패 시 원본 날짜 문자열에서 추출 시도
+            const dateMatch = data.lastDate.match(/(\d{1,2})/);
+            if(dateMatch){
+              top10Title.textContent = `Traffic Top 10 (${dateMatch[1]}일 기준)`;
+            } else {
+              top10Title.textContent = 'Traffic Top 10 (DoD 기준)';
+            }
+          }
+        } else if(top10Title){
+          top10Title.textContent = 'Traffic Top 10 (DoD 기준)';
+        }
+        
+        // Traffic Top 10 표 업데이트
+        const top10Body = document.getElementById('trafficTop10Body');
+        if(top10Body && stats.trafficTop10){
+          top10Body.innerHTML = stats.trafficTop10.map((item, idx) => {
+            const changeColor = item.change >= 0 ? '#00ff00' : '#ff4d4d';
+            const changeSign = item.change >= 0 ? '+' : '';
+            return `
+              <tr style="border-bottom:1px solid var(--border);${idx % 2 === 0 ? 'background:rgba(255,255,255,0.02)' : ''}">
+                <td style="padding:14px;font-size:16px;color:#fff;font-weight:600">${idx + 1}</td>
+                <td style="padding:14px;font-size:16px;color:#fff;font-weight:600">${item.country}</td>
+                <td style="padding:14px;text-align:right;font-size:16px;color:#fff">${(item.traffic/1e6).toFixed(2)}M</td>
+                <td style="padding:14px;text-align:right;font-size:16px;color:${changeColor};font-weight:600">${changeSign}${item.change.toFixed(2)}%</td>
+              </tr>
+            `;
+          }).join('');
+        }
+
+        // Build treemap arrays
+        let ids=[], labels=[], parents=[], values=[], colors=[], text=[], custom=[];
+
+        if(groupBy){
+          const groups={};
+          stats.topCountries.forEach((c,i)=>{ const G=getContinent(c); (groups[G]||(groups[G]={c:[],v:[],chg:[]})).c.push(c); groups[G].v.push(stats.topRevenue[i]); groups[G].chg.push(stats.topChange[i]); });
+          const continents=Object.keys(groups).sort((a,b)=> groups[b].v.reduce((x,y)=>x+y,0)-groups[a].v.reduce((x,y)=>x+y,0));
+
+          continents.forEach(cont=>{
+            const g=groups[cont];
+            const total=g.v.reduce((a,b)=>a+b,0);
+            const contId=`continent:${cont}`;
+            // 대륙 텍스트 크게 (볼드체) - Finviz 스타일
+            const continentTextShadow = 'text-shadow: 2px 2px 4px rgba(0,0,0,0.7), 0 0 6px rgba(0,0,0,0.6);';
+            ids.push(contId); labels.push(cont); parents.push(''); values.push(total); colors.push('#262931'); text.push(`<b style="font-size:86.4px;font-weight:900;letter-spacing:2px;color:#FFFFFF;${continentTextShadow}">${cont}</b>`); custom.push([null,null,cont]);
+
+            // thresholds for label density by share
+            const small=0.010, medium=0.025;
+            const maxAbsChange = g.chg.length > 0 ? Math.max(...g.chg.map(c => Math.abs(c))) : 1;
+            // 국가별 글씨 크기 고정 (모든 국가 동일)
+            const countryFontSize = 20; // India 크기로 고정
+            g.c.forEach((country,i)=>{
+              const revenue=g.v[i];
+              const change=g.chg[i];
+              const share=revenue/total; // area fraction approx
+              // 변화량에 따른 강도 계산
+              const changeIntensity = maxAbsChange > 0 ? Math.abs(change) / maxAbsChange : 0;
+              // 변화가 클수록 더 진한 색상
+              const col=colorFromChange(change, changeIntensity);
+              ids.push(`country:${cont}:${country}`);
+              labels.push(country);
+              parents.push(contId);
+              values.push(revenue);
+              colors.push(col);
+              let t='';
+              // 변화량만 표시, 볼드체, 명암 추가
+              const textShadow = 'text-shadow: 1px 1px 3px rgba(0,0,0,0.7), 0 0 4px rgba(0,0,0,0.5);';
+              if(share>=small){
+                t = `<b style="font-size:${countryFontSize}px;font-weight:bold;color:#FFFFFF;${textShadow}">${country}</b><br><b style="font-size:${Math.max(12,countryFontSize*0.75)}px;font-weight:bold;color:#FFFFFF;${textShadow}">${change>=0?'+':''}${change.toFixed(1)}%</b>`;
+              }else{
+                t = `<b style="font-size:${countryFontSize}px;font-weight:bold;color:#FFFFFF;${textShadow}">${country}</b>`;
+              }
+              text.push(t);
+              custom.push([change, revenue, cont]);
+            });
+          });
+                } else {
+          const total = stats.topRevenue.reduce((a,b)=>a+b,0);
+          const small=0.006;
+          const maxAbsChange = stats.topChange.length > 0 ? Math.max(...stats.topChange.map(c => Math.abs(c))) : 1;
+          // 국가별 글씨 크기 고정 (모든 국가 동일)
+          const countryFontSize = 20; // India 크기로 고정
+          stats.topCountries.forEach((country,i)=>{
+            const rev=stats.topRevenue[i]; const ch=stats.topChange[i]; const share=rev/total; const cont=getContinent(country);
+            // 변화량에 따른 강도 계산
+            const changeIntensity = maxAbsChange > 0 ? Math.abs(ch) / maxAbsChange : 0;
+            // 변화가 클수록 더 진한 색상
+            const col = colorFromChange(ch, changeIntensity);
+            ids.push(`country::${country}`); labels.push(country); parents.push(''); values.push(rev); colors.push(col);
+            let t='';
+            // 변화량만 표시, 볼드체, 명암 추가
+            const textShadow = 'text-shadow: 1px 1px 3px rgba(0,0,0,0.9), 0 0 5px rgba(0,0,0,0.7);';
+            if(share>=small) t = `<b style="font-size:${countryFontSize}px;font-weight:bold;color:#FFFFFF;${textShadow}">${country}</b><br><b style="font-size:${Math.max(12,countryFontSize*0.75)}px;font-weight:bold;color:#FFFFFF;${textShadow}">${ch>=0?'+':''}${ch.toFixed(1)}%</b>`;
+            else t = `<b style="font-size:${countryFontSize}px;font-weight:bold;color:#FFFFFF;${textShadow}">${country}</b>`;
+            text.push(t);
+            custom.push([ch, rev, cont]);
+          });
+        }
+
+        const height = 900; // fixed height for visual stability
+
+        const trace={
+          type:'treemap',
+          ids, labels, parents, values,
+          text, textinfo:'text', textposition:'middle center',
+          marker:{ colors, line:{width:1, color:'#000000'}, depthfade:false },
+          tiling:{ pad: 1 },
+          branchvalues:'total', maxdepth: groupBy ? 2 : 1,
+          hovertemplate:'<b>%{label}</b><br>Traffic: %{value:,.0f}<br>'+
+                        'Change: %{customdata[0]:.2f}%<br>Sector: %{customdata[2]}<extra></extra>',
+          customdata: custom,
+          pathbar:{visible:false}
+        };
+
+        const layout={
+          paper_bgcolor: '#262931',
+          plot_bgcolor: '#262931',
+          margin:{l:0,r:0,t:0,b:0}, height,
+          font:{family:'Arial, Helvetica, sans-serif',size:11,color:'#FFFFFF'},
+          hoverlabel:{bgcolor:'#161b22',bordercolor:'#30363d',font:{color:'#fff'}}
+        };
+
+        Plotly.newPlot('treemap',[trace],layout,{responsive:true}).then(()=>{ if(overlay) overlay.style.display='none'; });
+      }, 40);
+    }
+
+    // ---------- Tab Management ----------
+    document.querySelectorAll('.tab-button').forEach(button => {
+      button.addEventListener('click', () => {
+        const tabName = button.getAttribute('data-tab');
+        
+        // Remove active class from all buttons and contents
+        document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        
+        // Add active class to clicked button and corresponding content
+        button.classList.add('active');
+        document.getElementById(`tab-${tabName}`).classList.add('active');
+        
+        // Update content based on tab
+        if(tabName === 'risers-fallers'){
+          updateRisersFallers(currentData);
+        } else if(tabName === 'country-detail'){
+          updateCountrySelect(currentData);
+        } else if(tabName === 'news'){
+          loadNewsForRisersFallers(currentData);
+        }
+      });
+    });
+
+    // ---------- Risers/Fallers Tab ----------
+    function updateRisersFallers(data){
+      if(!data || !data.Country) return;
+      
+      const stats = calculateStats(data);
+      const threshold = 5; // 5% 이상
+      
+      const risers = [];
+      const fallers = [];
+      
+      for(let i = 0; i < stats.topCountries.length; i++){
+        const change = stats.topChange[i];
+        const country = stats.topCountries[i];
+        const traffic = stats.topRevenue[i];
+        
+        if(change >= threshold){
+          risers.push({country, change, traffic});
+        } else if(change <= -threshold){
+          fallers.push({country, change, traffic});
+        }
+      }
+      
+      // Sort by absolute change
+      risers.sort((a, b) => Math.abs(b.change) - Math.abs(a.change));
+      fallers.sort((a, b) => Math.abs(b.change) - Math.abs(a.change));
+      
+      // Render Risers
+      const risersList = document.getElementById('risersList');
+      if(risers.length > 0){
+        risersList.innerHTML = risers.map(item => `
+          <div class="country-item">
+            <div>
+              <div class="country-name">${item.country}</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:4px">${(item.traffic/1e6).toFixed(2)}M</div>
+            </div>
+            <div class="country-change positive">+${item.change.toFixed(2)}%</div>
+          </div>
+        `).join('');
+      } else {
+        risersList.innerHTML = `
+          <div class="empty-state" style="padding:40px 20px">
+            <div class="empty-state-icon">📈</div>
+            <div>5% 이상 상승한 국가가 없습니다.</div>
+          </div>
+        `;
+      }
+      
+      // Render Fallers
+      const fallersList = document.getElementById('fallersList');
+      if(fallers.length > 0){
+        fallersList.innerHTML = fallers.map(item => `
+          <div class="country-item">
+            <div>
+              <div class="country-name">${item.country}</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:4px">${(item.traffic/1e6).toFixed(2)}M</div>
+            </div>
+            <div class="country-change negative">${item.change.toFixed(2)}%</div>
+          </div>
+        `).join('');
+      } else {
+        fallersList.innerHTML = `
+          <div class="empty-state" style="padding:40px 20px">
+            <div class="empty-state-icon">📉</div>
+            <div>5% 이상 하락한 국가가 없습니다.</div>
+          </div>
+        `;
+      }
+    }
+
+    // ---------- Country Detail Tab ----------
+    function updateCountrySelect(data){
+      if(!data || !data.Country) return;
+      
+      const select = document.getElementById('countrySelect');
+      select.innerHTML = '<option value="">국가를 선택하세요...</option>';
+      
+      data.Country.sort().forEach(country => {
+        const option = document.createElement('option');
+        option.value = country;
+        option.textContent = country;
+        select.appendChild(option);
+      });
+      
+      // Remove existing listeners
+      const newSelect = select.cloneNode(true);
+      select.parentNode.replaceChild(newSelect, select);
+      
+      newSelect.addEventListener('change', (e) => {
+        const selectedCountry = e.target.value;
+        if(selectedCountry){
+          showCountryDetail(data, selectedCountry);
+        } else {
+          document.getElementById('countryDetailContent').style.display = 'none';
+          document.getElementById('countryDetailEmpty').style.display = 'block';
+        }
+      });
+      
+      // Update comparison type change listener
+      document.getElementById('comparisonType').addEventListener('change', () => {
+        if(newSelect.value){
+          showCountryDetail(data, newSelect.value);
+        }
+      });
+    }
+
+    function showCountryDetail(data, country){
+      const countryIndex = data.Country.indexOf(country);
+      
+      if(countryIndex === -1) return;
+      
+      const comparisonType = document.getElementById('comparisonType').value || 'DoD';
+      const lastDate = data.lastDate;
+      const lastDateIndex = data.allDates.length - 1;
+      const lastTraffic = (data.trafficByDate[data.allDates[lastDateIndex]] && data.trafficByDate[data.allDates[lastDateIndex]][countryIndex]) || 0;
+      
+      // Calculate change
+      let compareValue = null;
+      const lastDateObj = new Date(data.allDates[lastDateIndex]);
+      
+      if(!isNaN(lastDateObj)){
+        const compareDateObj = new Date(lastDateObj);
+        
+        switch(comparisonType){
+          case 'DoD':
+            if(data.allDates.length > 0 && data.trafficByDate[data.allDates[0]] && data.trafficByDate[data.allDates[0]][countryIndex] !== undefined){
+              compareValue = data.trafficByDate[data.allDates[0]][countryIndex];
+            }
+            break;
+          case 'WoW':
+            compareDateObj.setDate(compareDateObj.getDate() - 7);
+            const wowDate = `${compareDateObj.getFullYear()}-${String(compareDateObj.getMonth()+1).padStart(2,'0')}-${String(compareDateObj.getDate()).padStart(2,'0')}`;
+            const wowDates = data.allDates.filter(d => {
+              const dObj = new Date(d);
+              const diff = Math.abs((dObj - compareDateObj) / (1000 * 60 * 60 * 24));
+              return diff <= 1;
+            });
+            if(wowDates.length > 0){
+              const closestDate = wowDates.sort((a,b) => {
+                const aDiff = Math.abs((new Date(a) - compareDateObj) / (1000 * 60 * 60 * 24));
+                const bDiff = Math.abs((new Date(b) - compareDateObj) / (1000 * 60 * 60 * 24));
+                return aDiff - bDiff;
+              })[0];
+              if(data.trafficByDate[closestDate] && data.trafficByDate[closestDate][countryIndex] !== undefined){
+                compareValue = data.trafficByDate[closestDate][countryIndex];
+              }
+            }
+            break;
+          case 'MoM':
+            compareDateObj.setMonth(compareDateObj.getMonth() - 1);
+            const momDate = `${compareDateObj.getFullYear()}-${String(compareDateObj.getMonth()+1).padStart(2,'0')}-${String(compareDateObj.getDate()).padStart(2,'0')}`;
+            const momDates = data.allDates.filter(d => {
+              const dObj = new Date(d);
+              const diff = Math.abs((dObj - compareDateObj) / (1000 * 60 * 60 * 24));
+              return diff <= 3;
+            });
+            if(momDates.length > 0){
+              const closestDate = momDates.sort((a,b) => {
+                const aDiff = Math.abs((new Date(a) - compareDateObj) / (1000 * 60 * 60 * 24));
+                const bDiff = Math.abs((new Date(b) - compareDateObj) / (1000 * 60 * 60 * 24));
+                return aDiff - bDiff;
+              })[0];
+              if(data.trafficByDate[closestDate] && data.trafficByDate[closestDate][countryIndex] !== undefined){
+                compareValue = data.trafficByDate[closestDate][countryIndex];
+              }
+            }
+            break;
+          case 'YoY':
+            compareDateObj.setFullYear(compareDateObj.getFullYear() - 1);
+            const yoyDate = `${compareDateObj.getFullYear()}-${String(compareDateObj.getMonth()+1).padStart(2,'0')}-${String(compareDateObj.getDate()).padStart(2,'0')}`;
+            const yoyDates = data.allDates.filter(d => {
+              const dObj = new Date(d);
+              const diff = Math.abs((dObj - compareDateObj) / (1000 * 60 * 60 * 24));
+              return diff <= 7;
+            });
+            if(yoyDates.length > 0){
+              const closestDate = yoyDates.sort((a,b) => {
+                const aDiff = Math.abs((new Date(a) - compareDateObj) / (1000 * 60 * 60 * 24));
+                const bDiff = Math.abs((new Date(b) - compareDateObj) / (1000 * 60 * 60 * 24));
+                return aDiff - bDiff;
+              })[0];
+              if(data.trafficByDate[closestDate] && data.trafficByDate[closestDate][countryIndex] !== undefined){
+                compareValue = data.trafficByDate[closestDate][countryIndex];
+              }
+            }
+            break;
+        }
+      }
+      
+      const change = (compareValue !== null && compareValue > 0 && lastTraffic > 0) 
+        ? ((lastTraffic - compareValue) / compareValue) * 100 
+        : 0;
+      const continent = getContinent(country);
+      
+      // Get traffic history
+      const trafficHistory = [];
+      const dates = data.allDates;
+      dates.forEach((date) => {
+        if(data.trafficByDate[date] && data.trafficByDate[date][countryIndex] !== undefined){
+          trafficHistory.push({
+            date: date,
+            traffic: data.trafficByDate[date][countryIndex]
+          });
+        }
+      });
+      
+      // Update stats
+      const statsHTML = `
+        <div class="detail-stat-item">
+          <div class="detail-stat-label">Current Traffic</div>
+          <div class="detail-stat-value">${(lastTraffic/1e6).toFixed(2)}M</div>
+        </div>
+        <div class="detail-stat-item">
+          <div class="detail-stat-label">Change (${comparisonType})</div>
+          <div class="detail-stat-value" style="color:${change >= 0 ? '#00ff00' : '#ff4d4d'}">${change >= 0 ? '+' : ''}${change.toFixed(2)}%</div>
+        </div>
+        <div class="detail-stat-item">
+          <div class="detail-stat-label">Sector</div>
+          <div class="detail-stat-value" style="font-size:18px">${continent}</div>
+        </div>
+        <div class="detail-stat-item">
+          <div class="detail-stat-label">Data Points</div>
+          <div class="detail-stat-value" style="font-size:18px">${trafficHistory.length}</div>
+        </div>
+      `;
+      
+      document.getElementById('countryDetailStats').innerHTML = statsHTML;
+      
+      // Update chart
+      if(trafficHistory.length > 0){
+        const trace = {
+          x: trafficHistory.map(d => d.date),
+          y: trafficHistory.map(d => d.traffic),
+          type: 'scatter',
+          mode: 'lines+markers',
+          name: country,
+          line: {color: change >= 0 ? '#00ff00' : '#ff4d4d', width: 2},
+          marker: {size: 6, color: change >= 0 ? '#00ff00' : '#ff4d4d'}
+        };
+        
+        const layout = {
+          paper_bgcolor: '#262931',
+          plot_bgcolor: '#262931',
+          font: {color: '#fff', family: 'Arial, Helvetica, sans-serif'},
+          xaxis: {gridcolor: '#30363d', title: 'Date'},
+          yaxis: {gridcolor: '#30363d', title: 'Traffic'},
+          margin: {l: 60, r: 20, t: 20, b: 50},
+          hovermode: 'closest'
+        };
+        
+        Plotly.newPlot('countryTrafficChart', [trace], layout, {responsive: true});
+      }
+      
+      document.getElementById('countryDetailContent').style.display = 'block';
+      document.getElementById('countryDetailEmpty').style.display = 'none';
+    }
+
+    // ---------- News & Headlines Tab ----------
+    function loadNews(countries = null){
+      // API 연계 준비 구조
+      // TODO: 실제 API 연계 시 이 함수를 수정
+      // countries 파라미터: 상승/하락 국가 배열 [{country: 'USA', change: 5.2, type: 'riser'}, ...]
+      const newsList = document.getElementById('newsList');
+      
+      // 샘플 뉴스 데이터 (API 연계 전까지)
+      // 실제 API 연계 시: fetchNewsAPI(countries) 형태로 호출
+      const sampleNews = [
+        {
+          title: 'PUBG Mobile 글로벌 트래픽 증가 추세',
+          source: 'Gaming News',
+          date: new Date().toLocaleDateString('ko-KR'),
+          snippet: 'PUBG Mobile의 글로벌 트래픽이 지속적으로 증가하고 있습니다.',
+          url: '#',
+          relatedCountry: countries && countries.length > 0 ? countries[0].country : null
+        },
+        {
+          title: '모바일 게임 시장 동향 분석',
+          source: 'Tech Report',
+          date: new Date(Date.now() - 86400000).toLocaleDateString('ko-KR'),
+          snippet: '모바일 게임 시장의 트래픽 변화를 분석한 최신 리포트가 발표되었습니다.',
+          url: '#',
+          relatedCountry: null
+        }
+      ];
+      
+      if(sampleNews.length > 0){
+        newsList.innerHTML = sampleNews.map(news => `
+          <div class="news-item">
+            <div class="news-content">
+              <div class="news-title">
+                <a href="${news.url}" target="_blank">${news.title}</a>
+                ${news.relatedCountry ? `<span style="margin-left:8px;padding:2px 8px;background:rgba(35,134,54,0.2);border:1px solid #238636;border-radius:4px;font-size:11px;color:#238636">${news.relatedCountry}</span>` : ''}
+              </div>
+              <div class="news-meta">
+                <span class="news-source">${news.source}</span>
+                <span class="news-date">${news.date}</span>
+              </div>
+              <div class="news-snippet">${news.snippet}</div>
+            </div>
+          </div>
+        `).join('');
+      } else {
+        newsList.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">📰</div>
+            <div>뉴스가 없습니다.</div>
+            <div style="margin-top:12px;font-size:12px;color:var(--muted)">API 연계 후 실제 뉴스가 표시됩니다.</div>
+          </div>
+        `;
+      }
+    }
+
+    // Load news for risers/fallers
+    function loadNewsForRisersFallers(data){
+      if(!data || !data.Country) return;
+      
+      const stats = calculateStats(data);
+      const threshold = 5;
+      
+      const risers = [];
+      const fallers = [];
+      
+      for(let i = 0; i < stats.topCountries.length; i++){
+        const change = stats.topChange[i];
+        const country = stats.topCountries[i];
+        
+        if(change >= threshold){
+          risers.push({country, change, type: 'riser'});
+        } else if(change <= -threshold){
+          fallers.push({country, change, type: 'faller'});
+        }
+      }
+      
+      // Combine risers and fallers for news API
+      const countriesForNews = [...risers, ...fallers];
+      loadNews(countriesForNews);
+    }
+
+    document.getElementById('btnRefreshNews')?.addEventListener('click', () => {
+      loadNewsForRisersFallers(currentData);
+    });
+
+    // Update tabs when data changes
+    const originalCreateTreemap = createTreemap;
+    createTreemap = function(data){
+      originalCreateTreemap(data);
+      // Update other tabs if they are active
+      if(document.getElementById('tab-risers-fallers').classList.contains('active')){
+        updateRisersFallers(data);
+      }
+      if(document.getElementById('tab-country-detail').classList.contains('active')){
+        updateCountrySelect(data);
+      }
+      if(document.getElementById('tab-news').classList.contains('active')){
+        loadNewsForRisersFallers(data);
+      }
+    };
+
+    // initial draw
+    window.addEventListener('load',()=>{
+      const t=overlay?.querySelector('.loading-text'); if(t) t.textContent='샘플 데이터로 초기화 중...';
+      setTimeout(()=> {
+        createTreemap(currentData);
+        updateCountrySelect(currentData);
+      }, 120);
+    });
+    </script>
+</body>
+</html>
