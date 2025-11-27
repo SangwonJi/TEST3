@@ -261,7 +261,10 @@
             <button id="btnRefreshNews" style="padding:8px 16px;background:linear-gradient(135deg,#238636,#2ea043);border:none;border-radius:6px;color:#fff;font-weight:600;cursor:pointer;font-size:13px">🔄 새로고침</button>
           </div>
           <div style="margin-bottom:16px;padding:12px;background:rgba(35,134,54,0.1);border:1px solid rgba(35,134,54,0.3);border-radius:6px;font-size:13px;color:var(--muted)">
-            <strong style="color:#238636">💡 참고:</strong> 상승/하락 국가(5% 이상)에 대한 뉴스를 자동으로 검색합니다. RSS 피드와 AI 검색을 통해 실시간 뉴스를 가져옵니다.
+            <strong style="color:#238636">💡 참고:</strong> 
+            <span id="newsMethodInfo">Gemini API가 트래픽 변화 원인을 분석하고 관련 뉴스를 찾습니다.</span>
+            <br style="margin-top:8px">
+            <small style="color:var(--muted)">💡 Gemini API 키가 없으면 RSS 피드(Google News 검색)를 사용합니다.</small>
           </div>
           <div id="newsList">
             <div class="empty-state">
@@ -1273,21 +1276,29 @@
       `;
       
       try {
-        // 방법 1: RSS 피드 사용 (API 키 불필요)
+        // 방법 1: Gemini API 사용 (권장 - 트래픽 변화 원인 분석)
+        const apiKey = window.API_CONFIG?.GEMINI_API_KEY;
+        if(apiKey && apiKey !== 'YOUR_GEMINI_API_KEY_HERE'){
+          document.getElementById('newsMethodInfo').textContent = 'Gemini AI가 트래픽 변화 원인을 분석하고 관련 뉴스를 찾는 중...';
+          const newsFromGemini = await fetchNewsFromGemini(countries);
+          if(newsFromGemini && newsFromGemini.length > 0){
+            document.getElementById('newsMethodInfo').textContent = 'Gemini AI 분석 결과 (트래픽 변화 원인 포함)';
+            renderNews(newsFromGemini);
+            return;
+          }
+        }
+        
+        // 방법 2: RSS 피드 사용 (폴백 - API 키 없을 때, 단순 Google News 검색)
+        document.getElementById('newsMethodInfo').textContent = 'RSS 피드(Google News 검색)로 뉴스를 가져오는 중...';
         const newsFromRSS = await fetchNewsFromRSS(countries);
-        
-        // 방법 2: Gemini API 사용 (선택사항, API 키 필요하지만 무료)
-        // const newsFromGemini = await fetchNewsFromGemini(countries);
-        
-        // 방법 3: GPT API 사용 (선택사항, API 키 필요)
-        // const newsFromGPT = await fetchNewsFromGPT(countries);
-        
         if(newsFromRSS && newsFromRSS.length > 0){
+          document.getElementById('newsMethodInfo').textContent = 'RSS 피드 결과 (Google News 검색) - 원인 분석 없음';
           renderNews(newsFromRSS);
           return;
         }
         
-        // RSS 실패 시 샘플 데이터 표시
+        // 모두 실패 시 샘플 데이터 표시
+        document.getElementById('newsMethodInfo').textContent = '샘플 데이터 표시 중...';
         renderSampleNews(countries);
       } catch(error) {
         console.error('뉴스 로드 실패:', error);
@@ -1301,70 +1312,128 @@
       
       try {
         // 검색 키워드 생성
-        let searchTerms = 'PUBG Mobile mobile game traffic';
+        let searchTerms = 'PUBG Mobile mobile game';
         if(countries && countries.length > 0){
-          const countryNames = countries.map(c => c.country).join(' OR ');
-          searchTerms += ` (${countryNames})`;
-        }
-        
-        // Google News RSS (CORS 프록시 필요할 수 있음)
-        // 여러 RSS 소스 시도
-        const rssSources = [
-          // Google News RSS (프록시 필요)
-          `https://news.google.com/rss/search?q=${encodeURIComponent(searchTerms)}&hl=ko&gl=KR&ceid=KR:ko`,
-          // 다른 뉴스 RSS 피드들도 추가 가능
-        ];
-        
-        // CORS 프록시 사용 (무료 서비스)
-        const corsProxy = 'https://api.allorigins.win/get?url=';
-        
-        for(const rssUrl of rssSources){
-          try {
-            const response = await fetch(corsProxy + encodeURIComponent(rssUrl));
-            const data = await response.json();
-            
-            // RSS 파싱
-            const parser = new DOMParser();
-            const xmlDoc = parser.parseFromString(data.contents, 'text/xml');
-            const items = xmlDoc.querySelectorAll('item');
-            
-            items.forEach((item, index) => {
-              if(index >= 10) return; // 최대 10개
-              
-              const title = item.querySelector('title')?.textContent || '';
-              const link = item.querySelector('link')?.textContent || '#';
-              const pubDate = item.querySelector('pubDate')?.textContent || '';
-              const description = item.querySelector('description')?.textContent || '';
-              const source = item.querySelector('source')?.textContent || 'Google News';
-              
-              // 관련 국가 확인
-              let relatedCountry = null;
-              if(countries){
-                for(const country of countries){
-                  if(title.toLowerCase().includes(country.country.toLowerCase()) || 
-                     description.toLowerCase().includes(country.country.toLowerCase())){
-                    relatedCountry = country.country;
-                    break;
-                  }
-                }
-              }
-              
-              news.push({
-                title: title.replace(/<[^>]*>/g, ''), // HTML 태그 제거
-                source: source,
-                date: formatDate(pubDate),
-                snippet: description.replace(/<[^>]*>/g, '').substring(0, 150) + '...',
-                url: link,
-                relatedCountry: relatedCountry
-              });
-            });
-            
-            if(news.length > 0) break; // 성공하면 중단
-          } catch(err) {
-            console.warn('RSS 소스 실패:', err);
-            continue;
+          // 상승 국가와 하락 국가를 구분하여 검색
+          const risers = countries.filter(c => c.type === 'riser').map(c => c.country);
+          const fallers = countries.filter(c => c.type === 'faller').map(c => c.country);
+          
+          if(risers.length > 0){
+            searchTerms += ` (${risers.slice(0, 3).join(' OR ')})`;
           }
         }
+        
+        // 여러 RSS 소스 시도 (CORS 프록시 사용)
+        const corsProxies = [
+          'https://api.allorigins.win/get?url=',
+          'https://corsproxy.io/?',
+          'https://api.codetabs.com/v1/proxy?quest='
+        ];
+        
+        const rssUrls = [
+          // Google News RSS - PUBG Mobile 검색
+          `https://news.google.com/rss/search?q=${encodeURIComponent(searchTerms)}&hl=ko&gl=KR&ceid=KR:ko`,
+          // Google News RSS - 모바일 게임 일반
+          `https://news.google.com/rss/search?q=${encodeURIComponent('mobile game traffic')}&hl=ko&gl=KR&ceid=KR:ko`,
+        ];
+        
+        // 각 프록시와 RSS 소스 조합 시도
+        for(const rssUrl of rssUrls){
+          for(const proxy of corsProxies){
+            try {
+              const fullUrl = proxy + encodeURIComponent(rssUrl);
+              const response = await fetch(fullUrl, {
+                method: 'GET',
+                headers: {
+                  'Accept': 'application/json'
+                }
+              });
+              
+              if(!response.ok) continue;
+              
+              const data = await response.json();
+              const xmlContent = data.contents || data || '';
+              
+              // RSS 파싱
+              const parser = new DOMParser();
+              const xmlDoc = parser.parseFromString(xmlContent, 'text/xml');
+              
+              // 파싱 오류 확인
+              const parseError = xmlDoc.querySelector('parsererror');
+              if(parseError) {
+                console.warn('XML 파싱 오류:', parseError.textContent);
+                continue;
+              }
+              
+              const items = xmlDoc.querySelectorAll('item');
+              
+              if(items.length === 0) continue;
+              
+              items.forEach((item, index) => {
+                if(index >= 15) return; // 최대 15개
+                
+                const title = item.querySelector('title')?.textContent || '';
+                const link = item.querySelector('link')?.textContent || 
+                           item.querySelector('guid')?.textContent || '#';
+                const pubDate = item.querySelector('pubDate')?.textContent || 
+                              item.querySelector('pubdate')?.textContent || '';
+                const description = item.querySelector('description')?.textContent || '';
+                const source = item.querySelector('source')?.textContent || 
+                             item.querySelector('dc\\:creator')?.textContent || 'Google News';
+                
+                // 중복 제거
+                if(news.some(n => n.title === title)) return;
+                
+                // 관련 국가 확인
+                let relatedCountry = null;
+                let changeType = null;
+                if(countries){
+                  for(const country of countries){
+                    const countryLower = country.country.toLowerCase();
+                    const titleLower = title.toLowerCase();
+                    const descLower = description.toLowerCase();
+                    
+                    if(titleLower.includes(countryLower) || descLower.includes(countryLower)){
+                      relatedCountry = country.country;
+                      changeType = country.type; // 'riser' or 'faller'
+                      break;
+                    }
+                  }
+                }
+                
+                // PUBG Mobile 관련 키워드 확인
+                const relevantKeywords = ['pubg', 'mobile game', 'mobile gaming', 'game traffic', 'dau', 'user'];
+                const isRelevant = relevantKeywords.some(keyword => 
+                  title.toLowerCase().includes(keyword) || description.toLowerCase().includes(keyword)
+                );
+                
+                // 관련성이 있거나 국가 태그가 있는 경우만 추가
+                if(isRelevant || relatedCountry){
+                  news.push({
+                    title: title.replace(/<[^>]*>/g, '').trim(),
+                    source: source.replace(/<[^>]*>/g, '').trim(),
+                    date: formatDate(pubDate),
+                    snippet: description.replace(/<[^>]*>/g, '').trim().substring(0, 200) + (description.length > 200 ? '...' : ''),
+                    url: link,
+                    relatedCountry: relatedCountry,
+                    changeType: changeType
+                  });
+                }
+              });
+              
+              if(news.length >= 10) break; // 충분한 뉴스가 있으면 중단
+            } catch(err) {
+              console.warn('RSS 소스 실패:', err.message);
+              continue;
+            }
+          }
+          
+          if(news.length >= 10) break; // 충분한 뉴스가 있으면 중단
+        }
+        
+        // 날짜순 정렬 (최신순)
+        news.sort((a, b) => new Date(b.date) - new Date(a.date));
+        
       } catch(error) {
         console.error('RSS 피드 가져오기 실패:', error);
       }
@@ -1372,15 +1441,53 @@
       return news;
     }
 
-    // Gemini API로 뉴스 검색 (API 키 필요, 무료 티어 사용 가능)
+    // Gemini API로 뉴스 검색 및 원인 분석 (API 키 필요, 무료 티어 사용 가능)
     async function fetchNewsFromGemini(countries = null){
       const apiKey = window.API_CONFIG?.GEMINI_API_KEY;
       if(!apiKey || apiKey === 'YOUR_GEMINI_API_KEY_HERE') return null;
       
       try {
-        const countryNames = countries ? countries.map(c => c.country).join(', ') : '';
-        const prompt = `PUBG Mobile 트래픽과 관련된 최신 뉴스를 검색해주세요. ${countryNames ? `특히 ${countryNames} 국가와 관련된 뉴스를 찾아주세요.` : ''} 최근 7일 이내의 뉴스만 알려주세요. 각 뉴스마다 제목, 출처, 날짜, 링크를 포함해주세요.`;
+        // 상승/하락 국가 구분
+        const risers = countries ? countries.filter(c => c.type === 'riser') : [];
+        const fallers = countries ? countries.filter(c => c.type === 'faller') : [];
         
+        let prompt = `다음은 PUBG Mobile 게임의 국가별 트래픽 변화 데이터입니다:\n\n`;
+        
+        if(risers.length > 0){
+          prompt += `📈 트래픽이 5% 이상 상승한 국가:\n`;
+          risers.forEach(c => {
+            prompt += `- ${c.country}: ${c.change.toFixed(2)}% 상승\n`;
+          });
+          prompt += `\n이 국가들의 트래픽 상승 원인을 분석하고, 관련된 최신 뉴스나 이벤트를 찾아주세요.\n\n`;
+        }
+        
+        if(fallers.length > 0){
+          prompt += `📉 트래픽이 5% 이상 하락한 국가:\n`;
+          fallers.forEach(c => {
+            prompt += `- ${c.country}: ${c.change.toFixed(2)}% 하락\n`;
+          });
+          prompt += `\n이 국가들의 트래픽 하락 원인을 분석하고, 관련된 최신 뉴스나 이벤트를 찾아주세요.\n\n`;
+        }
+        
+        if(!risers.length && !fallers.length){
+          prompt += `PUBG Mobile의 글로벌 트래픽과 관련된 최신 뉴스를 찾아주세요.\n\n`;
+        }
+        
+        prompt += `다음 형식으로 JSON 배열로 응답해주세요 (각 뉴스마다):
+[
+  {
+    "title": "뉴스 제목",
+    "source": "출처",
+    "date": "날짜",
+    "snippet": "요약 (2-3문장)",
+    "url": "링크 (가능한 경우)",
+    "relatedCountry": "관련 국가 (없으면 null)",
+    "reason": "트래픽 변화 원인 분석 (상승/하락 이유)"
+  }
+]
+
+최근 7일 이내의 뉴스만 포함하고, 실제로 존재하는 뉴스만 알려주세요. 최대 10개까지.`;
+
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
           method: 'POST',
           headers: {
@@ -1391,14 +1498,89 @@
               parts: [{
                 text: prompt
               }]
-            }]
+            }],
+            generationConfig: {
+              temperature: 0.7,
+              topK: 40,
+              topP: 0.95,
+              maxOutputTokens: 2048,
+            }
           })
         });
         
+        if(!response.ok) {
+          throw new Error(`Gemini API 오류: ${response.status}`);
+        }
+        
         const data = await response.json();
-        // Gemini 응답 파싱 및 뉴스 형식으로 변환
-        // 실제 구현 필요
-        return null;
+        
+        // Gemini 응답에서 텍스트 추출
+        const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        
+        if(!responseText) {
+          console.warn('Gemini 응답이 비어있습니다.');
+          return null;
+        }
+        
+        // JSON 파싱 시도 (마크다운 코드 블록 제거)
+        let jsonText = responseText.trim();
+        
+        // ```json 또는 ```로 감싸진 경우 제거
+        jsonText = jsonText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        
+        // JSON 배열 추출 시도
+        const jsonMatch = jsonText.match(/\[[\s\S]*\]/);
+        if(jsonMatch) {
+          jsonText = jsonMatch[0];
+        }
+        
+        try {
+          const newsArray = JSON.parse(jsonText);
+          
+          // 뉴스 형식 변환
+          return newsArray.map(news => ({
+            title: news.title || '제목 없음',
+            source: news.source || 'Gemini AI',
+            date: news.date || new Date().toLocaleDateString('ko-KR'),
+            snippet: news.snippet || '',
+            url: news.url || '#',
+            relatedCountry: news.relatedCountry || null,
+            changeType: risers.some(c => c.country === news.relatedCountry) ? 'riser' : 
+                       fallers.some(c => c.country === news.relatedCountry) ? 'faller' : null,
+            reason: news.reason || null // 트래픽 변화 원인
+          }));
+        } catch(parseError) {
+          // JSON 파싱 실패 시 텍스트에서 뉴스 정보 추출 시도
+          console.warn('JSON 파싱 실패, 텍스트 파싱 시도:', parseError);
+          
+          // 간단한 텍스트 파싱 (폴백)
+          const newsItems = [];
+          const lines = responseText.split('\n').filter(l => l.trim());
+          
+          let currentNews = null;
+          for(const line of lines) {
+            if(line.includes('title') || line.includes('제목')) {
+              currentNews = { title: line.replace(/.*title.*[:：]\s*/i, '').trim() };
+            } else if(line.includes('source') || line.includes('출처')) {
+              if(currentNews) currentNews.source = line.replace(/.*source.*[:：]\s*/i, '').trim();
+            } else if(line.includes('reason') || line.includes('원인')) {
+              if(currentNews) currentNews.reason = line.replace(/.*reason.*[:：]\s*/i, '').trim();
+            }
+          }
+          
+          if(newsItems.length > 0) return newsItems;
+          
+          // 최종 폴백: Gemini 응답을 그대로 표시
+          return [{
+            title: 'Gemini AI 분석 결과',
+            source: 'Gemini AI',
+            date: new Date().toLocaleDateString('ko-KR'),
+            snippet: responseText.substring(0, 500) + '...',
+            url: '#',
+            relatedCountry: null,
+            reason: null
+          }];
+        }
       } catch(error) {
         console.error('Gemini API 호출 실패:', error);
         return null;
@@ -1420,21 +1602,30 @@
       const newsList = document.getElementById('newsList');
       
       if(newsArray.length > 0){
-        newsList.innerHTML = newsArray.map(news => `
+        newsList.innerHTML = newsArray.map(news => {
+          // 국가 태그 색상 (상승/하락에 따라)
+          const countryTagColor = news.changeType === 'riser' ? '#00ff00' : 
+                                 news.changeType === 'faller' ? '#ff4d4d' : '#238636';
+          const countryTagBg = news.changeType === 'riser' ? 'rgba(0,255,0,0.2)' : 
+                              news.changeType === 'faller' ? 'rgba(255,77,77,0.2)' : 'rgba(35,134,54,0.2)';
+          
+          return `
           <div class="news-item">
             <div class="news-content">
               <div class="news-title">
                 <a href="${news.url}" target="_blank" rel="noopener noreferrer">${news.title}</a>
-                ${news.relatedCountry ? `<span style="margin-left:8px;padding:2px 8px;background:rgba(35,134,54,0.2);border:1px solid #238636;border-radius:4px;font-size:11px;color:#238636">${news.relatedCountry}</span>` : ''}
+                ${news.relatedCountry ? `<span style="margin-left:8px;padding:2px 8px;background:${countryTagBg};border:1px solid ${countryTagColor};border-radius:4px;font-size:11px;color:${countryTagColor}">${news.relatedCountry} ${news.changeType === 'riser' ? '📈' : news.changeType === 'faller' ? '📉' : ''}</span>` : ''}
               </div>
               <div class="news-meta">
                 <span class="news-source">${news.source}</span>
                 <span class="news-date">${news.date}</span>
               </div>
               <div class="news-snippet">${news.snippet}</div>
+              ${news.reason ? `<div style="margin-top:8px;padding:8px;background:rgba(35,134,54,0.1);border-left:3px solid #238636;border-radius:4px;font-size:12px;color:var(--muted)"><strong style="color:#238636">💡 원인 분석:</strong> ${news.reason}</div>` : ''}
             </div>
           </div>
-        `).join('');
+        `;
+        }).join('');
       } else {
         renderSampleNews();
       }
