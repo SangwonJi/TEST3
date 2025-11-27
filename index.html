@@ -1118,6 +1118,22 @@
             document.querySelectorAll('[data-sub-tab]').forEach(btn => btn.classList.remove('active'));
             const subTabButton = document.querySelector('[data-sub-tab="treemap"]');
             if(subTabButton) subTabButton.classList.add('active');
+            
+            // Traffic 탭으로 돌아올 때 트리맵 다시 렌더링
+            if(mainTab === 'traffic' && currentData){
+              setTimeout(() => {
+                const treemapDiv = document.getElementById('treemap');
+                if(treemapDiv && treemapDiv.offsetParent !== null){
+                  // Plotly가 이미 렌더링되어 있으면 리사이즈
+                  if(treemapDiv.data){
+                    Plotly.Plots.resize('treemap');
+                  } else {
+                    // 트리맵이 없으면 다시 렌더링
+                    renderTreemap(currentData);
+                  }
+                }
+              }, 100);
+            }
           }
         }
       });
@@ -1140,7 +1156,19 @@
         if(targetContent) targetContent.classList.add('active');
         
         // 콘텐츠 업데이트
-        if(subTab === 'risers-fallers'){
+        if(subTab === 'treemap'){
+          // 트리맵 탭이 활성화될 때 Plotly 리사이즈
+          setTimeout(() => {
+            const treemapDiv = document.getElementById('treemap');
+            if(treemapDiv && treemapDiv.offsetParent !== null && mainTab === 'traffic'){
+              if(treemapDiv.data && treemapDiv.data.length > 0){
+                Plotly.Plots.resize('treemap');
+              } else if(currentData){
+                renderTreemap(currentData);
+              }
+            }
+          }, 100);
+        } else if(subTab === 'risers-fallers'){
           updateRisersFallers(currentData);
         } else if(subTab === 'country-detail'){
           updateCountrySelect(currentData);
