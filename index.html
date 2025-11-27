@@ -9,19 +9,7 @@
     <!-- API 설정 파일 (선택사항, 로컬 개발용) -->
     <script>
       // config.js가 있으면 로드, 없으면 무시 (404 에러 방지)
-      (function() {
-        const configScript = document.createElement('script');
-        configScript.src = 'config.js';
-        configScript.async = true;
-        configScript.onerror = function() {
-          // config.js가 없어도 정상 동작 (GitHub Pages에서는 없음)
-          // 에러를 조용히 무시 (콘솔에 404 에러가 표시되지만 기능에는 영향 없음)
-        };
-        configScript.onload = function() {
-          console.log('config.js loaded successfully');
-        };
-        document.head.appendChild(configScript);
-      })();
+      // GitHub Pages에서는 config.js가 없으므로 에러가 발생하지만 기능에는 영향 없음
     </script>
     <style>
     :root{
@@ -1196,30 +1184,36 @@
             
             // Traffic 또는 Revenue 탭으로 돌아올 때 트리맵 다시 렌더링
             if(mainTab === 'traffic' || mainTab === 'revenue'){
+              // currentData가 없으면 샘플 데이터 생성
+              if(!currentData){
+                const sampleData = generateSampleData();
+                currentData = sampleData;
+              }
+              
+              // 탭 콘텐츠가 활성화된 후 렌더링
               setTimeout(() => {
-                // currentData가 없으면 샘플 데이터 생성
-                if(!currentData){
-                  const sampleData = generateSampleData();
-                  currentData = sampleData;
-                }
-                
                 const treemapDivId = mainTab === 'revenue' ? 'treemap-revenue' : 'treemap';
-                const treemapDiv = document.getElementById(treemapDivId);
+                const treemapContent = document.querySelector(`[data-main-tab="${mainTab}"][data-sub-tab="treemap"]`);
                 
-                // 항상 트리맵 렌더링 (Revenue 탭은 항상 새로 렌더링)
+                // Revenue 탭은 항상 새로 렌더링
                 if(mainTab === 'revenue'){
-                  createTreemap(currentData, mainTab);
-                } else if(treemapDiv && treemapDiv.offsetParent !== null){
-                  // Traffic 탭은 이미 렌더링되어 있으면 리사이즈만
-                  if(treemapDiv.data && treemapDiv.data.length > 0){
-                    Plotly.Plots.resize(treemapDivId);
-                  } else {
+                  if(treemapContent && treemapContent.classList.contains('active')){
                     createTreemap(currentData, mainTab);
                   }
                 } else {
-                  createTreemap(currentData, mainTab);
+                  // Traffic 탭은 이미 렌더링되어 있으면 리사이즈만
+                  const treemapDiv = document.getElementById(treemapDivId);
+                  if(treemapDiv && treemapDiv.offsetParent !== null){
+                    if(treemapDiv.data && treemapDiv.data.length > 0){
+                      Plotly.Plots.resize(treemapDivId);
+                    } else {
+                      createTreemap(currentData, mainTab);
+                    }
+                  } else {
+                    createTreemap(currentData, mainTab);
+                  }
                 }
-              }, 150);
+              }, 200);
             }
           }
         }
