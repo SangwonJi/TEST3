@@ -1495,24 +1495,58 @@
         }
         
         const csvText = await response.text();
+        
+        // CSV 파싱 시작 시간 측정
+        const parseStartTime = performance.now();
+        
         Papa.parse(csvText, {
           header: true,
           skipEmptyLines: true,
+          worker: false, // 워커 스레드 사용 안 함 (작은 파일)
           complete: (results) => {
-            allNewsData = results.data.map(row => ({
-              date: row.date || '',
-              country: row.country || '',
-              continent: row.continent || '',
-              title: row.title || '',
-              summary: row.summary || '',
-              url: row.url || '#',
-              source: row.source || 'Unknown',
-              category: row.category || 'other',
-              category_group: row.category_group || 'other',
-              traffic_impact: row.traffic_impact || ''
-            }));
+            const parseTime = performance.now() - parseStartTime;
+            console.log(`CSV 파싱 시간: ${parseTime.toFixed(2)}ms`);
             
-            document.getElementById('newsMethodInfo').textContent = `총 ${allNewsData.length}개의 뉴스를 불러왔습니다.`;
+            // category_group 매핑 함수
+            const mapToGroupCategory = (detailCategory) => {
+              const outageBlock = ['internet_shutdown', 'tech_outage', 'power_outage', 'censorship', 'cyber_attack', 'infrastructure_damage'];
+              const socialCrisis = ['war_conflict', 'terrorism_explosion', 'natural_disaster', 'protest_strike', 'curfew', 'pandemic', 'economic'];
+              const seasonalCalendar = ['holiday', 'school_calendar', 'election'];
+              const gamingCompetitor = ['gaming', 'competitor_game', 'social_trend', 'sports_event', 'major_event'];
+              
+              if (outageBlock.includes(detailCategory)) return 'outage_block';
+              if (socialCrisis.includes(detailCategory)) return 'social_crisis';
+              if (seasonalCalendar.includes(detailCategory)) return 'seasonal_calendar';
+              if (gamingCompetitor.includes(detailCategory)) return 'gaming_competitor';
+              return 'other';
+            };
+            
+            const mapStartTime = performance.now();
+            allNewsData = results.data.map(row => {
+              // HTML 태그 제거 (summary에서)
+              const cleanSummary = (row.summary || '').replace(/<[^>]*>/g, '').trim();
+              const cleanTitle = (row.title || '').replace(/<[^>]*>/g, '').trim();
+              
+              const category = row.category || 'other';
+              const categoryGroup = row.category_group || mapToGroupCategory(category);
+              
+              return {
+                date: row.date || '',
+                country: row.country || '',
+                continent: row.continent || '',
+                title: cleanTitle,
+                summary: cleanSummary,
+                url: row.url || '#',
+                source: row.source || 'Unknown',
+                category: category,
+                category_group: categoryGroup,
+                traffic_impact: row.traffic_impact || ''
+              };
+            });
+            const mapTime = performance.now() - mapStartTime;
+            console.log(`데이터 매핑 시간: ${mapTime.toFixed(2)}ms`);
+            
+            document.getElementById('newsMethodInfo').textContent = `총 ${allNewsData.length}개의 뉴스를 불러왔습니다. (${parseTime.toFixed(0)}ms)`;
             filterNewsByCategory(currentCategoryFilter);
           },
           error: (error) => {
@@ -1540,20 +1574,42 @@
     
     // 카테고리별 필터링 (그룹 카테고리 기준)
     function filterNewsByCategory(category){
+      const filterStartTime = performance.now();
       currentCategoryFilter = category;
       
       let filteredNews = allNewsData;
       if(category !== 'all'){
         // 그룹 카테고리로 필터링
-        filteredNews = allNewsData.filter(news => news.category_group === category);
+        filteredNews = allNewsData.filter(news => {
+          // category_group이 없으면 자동 매핑
+          if (!news.category_group) {
+            const mapToGroupCategory = (detailCategory) => {
+              const outageBlock = ['internet_shutdown', 'tech_outage', 'power_outage', 'censorship', 'cyber_attack', 'infrastructure_damage'];
+              const socialCrisis = ['war_conflict', 'terrorism_explosion', 'natural_disaster', 'protest_strike', 'curfew', 'pandemic', 'economic'];
+              const seasonalCalendar = ['holiday', 'school_calendar', 'election'];
+              const gamingCompetitor = ['gaming', 'competitor_game', 'social_trend', 'sports_event', 'major_event'];
+              
+              if (outageBlock.includes(detailCategory)) return 'outage_block';
+              if (socialCrisis.includes(detailCategory)) return 'social_crisis';
+              if (seasonalCalendar.includes(detailCategory)) return 'seasonal_calendar';
+              if (gamingCompetitor.includes(detailCategory)) return 'gaming_competitor';
+              return 'other';
+            };
+            news.category_group = mapToGroupCategory(news.category || 'other');
+          }
+          return news.category_group === category;
+        });
       }
       
-      // 날짜순 정렬 (최신순)
+      // 날짜순 정렬 (최신순) - 성능 최적화
       filteredNews.sort((a, b) => {
         const dateA = new Date(a.date);
         const dateB = new Date(b.date);
-        return dateB - dateA;
+        return isNaN(dateB) ? -1 : (isNaN(dateA) ? 1 : dateB - dateA);
       });
+      
+      const filterTime = performance.now() - filterStartTime;
+      console.log(`필터링 시간: ${filterTime.toFixed(2)}ms, 결과: ${filteredNews.length}개`);
       
       renderNews(filteredNews);
       
