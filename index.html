@@ -4,18 +4,24 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Traffic by Country — Finviz-style Treemap</title>
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <!-- API 설정 파일 (선택사항, 로컬 개발용) -->
     <script>
-      // config.js가 있으면 로드, 없으면 무시
-      const configScript = document.createElement('script');
-      configScript.src = 'config.js';
-      configScript.onerror = () => {
-        // config.js가 없어도 정상 동작 (GitHub Pages에서는 없음)
-        console.log('config.js not found, using default settings');
-      };
-      document.head.appendChild(configScript);
+      // config.js가 있으면 로드, 없으면 무시 (404 에러 방지)
+      (function() {
+        const configScript = document.createElement('script');
+        configScript.src = 'config.js';
+        configScript.async = true;
+        configScript.onerror = function() {
+          // config.js가 없어도 정상 동작 (GitHub Pages에서는 없음)
+          // 에러를 조용히 무시 (콘솔에 404 에러가 표시되지만 기능에는 영향 없음)
+        };
+        configScript.onload = function() {
+          console.log('config.js loaded successfully');
+        };
+        document.head.appendChild(configScript);
+      })();
     </script>
     <style>
     :root{
