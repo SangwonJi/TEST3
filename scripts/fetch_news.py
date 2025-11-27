@@ -70,6 +70,50 @@ def get_continent(country: str) -> str:
     return continent_map.get(country, 'OTHER')
 
 
+def map_to_group_category(detail_category: str) -> str:
+    """
+    세부 카테고리를 그룹 카테고리로 매핑
+    
+    Args:
+        detail_category: 세부 카테고리 (예: internet_shutdown, war_conflict 등)
+    
+    Returns:
+        그룹 카테고리 (outage_block, social_crisis, seasonal_calendar, gaming_competitor, other)
+    """
+    # 🔴 장애 및 차단 (Outage & Block)
+    outage_block = [
+        'internet_shutdown', 'tech_outage', 'power_outage', 'censorship',
+        'cyber_attack', 'infrastructure_damage'
+    ]
+    
+    # 🟠 사회적 위기 (Social Crisis)
+    social_crisis = [
+        'war_conflict', 'terrorism_explosion', 'natural_disaster',
+        'protest_strike', 'curfew', 'pandemic', 'economic'
+    ]
+    
+    # 🟢 시즌 및 일정 (Seasonal & Calendar)
+    seasonal_calendar = [
+        'holiday', 'school_calendar', 'election'
+    ]
+    
+    # 🔵 게임 및 경쟁 (Gaming & Competitor)
+    gaming_competitor = [
+        'gaming', 'competitor_game', 'social_trend', 'sports_event', 'major_event'
+    ]
+    
+    if detail_category in outage_block:
+        return 'outage_block'
+    elif detail_category in social_crisis:
+        return 'social_crisis'
+    elif detail_category in seasonal_calendar:
+        return 'seasonal_calendar'
+    elif detail_category in gaming_competitor:
+        return 'gaming_competitor'
+    else:
+        return 'other'
+
+
 def fetch_news_from_openai(keyword: str, countries: List[Dict] = None) -> List[Dict]:
     """
     OpenAI API를 사용하여 뉴스 검색 및 분석
@@ -428,35 +472,45 @@ URL: {news_item.get('url', '')}
 다음 JSON 형식으로 응답해주세요:
 {{
   "relevant": true 또는 false (모바일 게임 트래픽에 영향을 줄 수 있으면 true),
-  "category": "gaming, holiday, school_calendar, war_conflict, natural_disaster, internet_shutdown, power_outage, curfew, economic, other 중 하나",
+  "category": "세부 카테고리 중 하나 (아래 목록 참고)",
   "country": "관련 국가명 (없으면 null)",
   "traffic_impact": "트래픽에 미치는 영향 설명 (간단히)",
   "summary_kr": "한국어로 2-3줄 요약"
 }}
 
-카테고리 설명:
-- gaming: 게임 관련 뉴스
-- holiday: 공휴일, 명절, 축제
-- school_calendar: 방학, 시험기간 등 학사일정
+세부 카테고리 목록 (정확히 하나 선택):
+
+🔴 장애 및 차단 (Outage & Block):
+- internet_shutdown: 인터넷 차단, 통신 장애
+- tech_outage: 소셜미디어/앱스토어/클라우드 장애
+- power_outage: 정전, 전력 공급 중단
+- censorship: 검열, 앱/게임 금지
+- cyber_attack: 사이버 공격, DDoS, 해킹
+- infrastructure_damage: 인프라 손상, 교량/건물 붕괴
+
+🟠 사회적 위기 (Social Crisis):
 - war_conflict: 전쟁, 분쟁, 군사 작전
 - terrorism_explosion: 테러, 폭발, 폭탄 공격
-- protest_strike: 시위, 파업, 폭동
 - natural_disaster: 지진, 홍수, 태풍, 산불 등 천재지변
-- internet_shutdown: 인터넷 차단, 통신 장애
-- power_outage: 정전, 전력 공급 중단
+- protest_strike: 시위, 파업, 폭동
 - curfew: 통금, 봉쇄, 비상사태
-- economic: 경제 위기, 인플레이션, 통화 평가절하
-- tech_outage: 소셜미디어/앱스토어/클라우드 장애
-- cyber_attack: 사이버 공격, DDoS, 해킹
-- censorship: 검열, 앱/게임 금지
-- sports_event: 월드컵, 올림픽 등 스포츠 이벤트
-- election: 선거, 투표, 정치 이벤트
 - pandemic: 팬데믹, 전염병, 격리
-- infrastructure_damage: 인프라 손상, 교량/건물 붕괴
+- economic: 경제 위기, 인플레이션, 통화 평가절하
+
+🟢 시즌 및 일정 (Seasonal & Calendar):
+- holiday: 공휴일, 명절, 축제
+- school_calendar: 방학, 시험기간 등 학사일정
+- election: 선거, 투표, 정치 이벤트
+
+🔵 게임 및 경쟁 (Gaming & Competitor):
+- gaming: 게임 관련 뉴스
 - competitor_game: 경쟁 게임 출시/업데이트
 - social_trend: 바이럴 트렌드, 인플루언서, e스포츠 토너먼트
+- sports_event: 월드컵, 올림픽 등 스포츠 이벤트
 - major_event: 주요 문화 행사, 게임 컨벤션
-- other: 기타
+
+⚪ 기타:
+- other: 분류 불가
 
 관련이 없으면 relevant: false로 설정하세요."""
 
@@ -491,35 +545,45 @@ URL: {news_item.get('url', '')}
 다음 JSON 형식으로 응답해주세요:
 {{
   "relevant": true 또는 false (모바일 게임 트래픽에 영향을 줄 수 있으면 true),
-  "category": "gaming, holiday, school_calendar, war_conflict, natural_disaster, internet_shutdown, power_outage, curfew, economic, other 중 하나",
+  "category": "세부 카테고리 중 하나 (아래 목록 참고)",
   "country": "관련 국가명 (없으면 null)",
   "traffic_impact": "트래픽에 미치는 영향 설명 (간단히)",
   "summary_kr": "한국어로 2-3줄 요약"
 }}
 
-카테고리 설명:
-- gaming: 게임 관련 뉴스
-- holiday: 공휴일, 명절, 축제
-- school_calendar: 방학, 시험기간 등 학사일정
+세부 카테고리 목록 (정확히 하나 선택):
+
+🔴 장애 및 차단 (Outage & Block):
+- internet_shutdown: 인터넷 차단, 통신 장애
+- tech_outage: 소셜미디어/앱스토어/클라우드 장애
+- power_outage: 정전, 전력 공급 중단
+- censorship: 검열, 앱/게임 금지
+- cyber_attack: 사이버 공격, DDoS, 해킹
+- infrastructure_damage: 인프라 손상, 교량/건물 붕괴
+
+🟠 사회적 위기 (Social Crisis):
 - war_conflict: 전쟁, 분쟁, 군사 작전
 - terrorism_explosion: 테러, 폭발, 폭탄 공격
-- protest_strike: 시위, 파업, 폭동
 - natural_disaster: 지진, 홍수, 태풍, 산불 등 천재지변
-- internet_shutdown: 인터넷 차단, 통신 장애
-- power_outage: 정전, 전력 공급 중단
+- protest_strike: 시위, 파업, 폭동
 - curfew: 통금, 봉쇄, 비상사태
-- economic: 경제 위기, 인플레이션, 통화 평가절하
-- tech_outage: 소셜미디어/앱스토어/클라우드 장애
-- cyber_attack: 사이버 공격, DDoS, 해킹
-- censorship: 검열, 앱/게임 금지
-- sports_event: 월드컵, 올림픽 등 스포츠 이벤트
-- election: 선거, 투표, 정치 이벤트
 - pandemic: 팬데믹, 전염병, 격리
-- infrastructure_damage: 인프라 손상, 교량/건물 붕괴
+- economic: 경제 위기, 인플레이션, 통화 평가절하
+
+🟢 시즌 및 일정 (Seasonal & Calendar):
+- holiday: 공휴일, 명절, 축제
+- school_calendar: 방학, 시험기간 등 학사일정
+- election: 선거, 투표, 정치 이벤트
+
+🔵 게임 및 경쟁 (Gaming & Competitor):
+- gaming: 게임 관련 뉴스
 - competitor_game: 경쟁 게임 출시/업데이트
 - social_trend: 바이럴 트렌드, 인플루언서, e스포츠 토너먼트
+- sports_event: 월드컵, 올림픽 등 스포츠 이벤트
 - major_event: 주요 문화 행사, 게임 컨벤션
-- other: 기타
+
+⚪ 기타:
+- other: 분류 불가
 
 관련이 없으면 relevant: false로 설정하세요."""
 
@@ -560,10 +624,14 @@ URL: {news_item.get('url', '')}
             if not ai_result.get('relevant', False):
                 return None
             
+            # 세부 카테고리
+            detail_category = ai_result.get('category', 'other')
+            
             # 정제된 정보 병합
             refined_item = {
                 **news_item,
-                'category': ai_result.get('category', 'other'),
+                'category': detail_category,  # 세부 카테고리 저장
+                'category_group': map_to_group_category(detail_category),  # 그룹 카테고리 추가
                 'summary': ai_result.get('summary_kr', news_item.get('summary', '')),
                 'traffic_impact': ai_result.get('traffic_impact', '')
             }
@@ -758,7 +826,7 @@ def save_to_csv(all_news: List[Dict]):
         df = pd.DataFrame(all_news)
         
         # 컬럼 순서 지정 (교차검증 컬럼 포함)
-        base_columns = ['date', 'country', 'continent', 'title', 'summary', 'url', 'source', 'category', 'traffic_impact']
+        base_columns = ['date', 'country', 'continent', 'title', 'summary', 'url', 'source', 'category', 'category_group', 'traffic_impact']
         optional_columns = ['confidence', 'validation', 'openai_summary', 'claude_summary']
         
         # 모든 컬럼 확인

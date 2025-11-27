@@ -294,32 +294,27 @@
             <strong style="color:#238636">💡 참고:</strong> 
             <span id="newsMethodInfo">모바일 게임 트래픽에 영향을 줄 수 있는 뉴스를 카테고리별로 확인할 수 있습니다.</span>
           </div>
-          <!-- 카테고리 필터 -->
-          <div style="margin-bottom:16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-            <strong style="color:var(--text);font-size:13px">카테고리:</strong>
-            <button class="category-filter active" data-category="all" style="padding:6px 12px;background:linear-gradient(135deg,#238636,#2ea043);border:none;border-radius:6px;color:#fff;font-size:12px;cursor:pointer;font-weight:600">전체</button>
-            <button class="category-filter" data-category="gaming" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">🎮 게임</button>
-            <button class="category-filter" data-category="holiday" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">🎉 공휴일</button>
-            <button class="category-filter" data-category="school_calendar" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">📚 학사일정</button>
-            <button class="category-filter" data-category="war_conflict" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">⚔️ 전쟁/분쟁</button>
-            <button class="category-filter" data-category="terrorism_explosion" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">💣 테러/폭발</button>
-            <button class="category-filter" data-category="protest_strike" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">📢 시위/파업</button>
-            <button class="category-filter" data-category="natural_disaster" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">🌊 천재지변</button>
-            <button class="category-filter" data-category="internet_shutdown" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">📡 인터넷 차단</button>
-            <button class="category-filter" data-category="power_outage" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">⚡ 정전</button>
-            <button class="category-filter" data-category="curfew" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">🚫 통금/봉쇄</button>
-            <button class="category-filter" data-category="economic" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">💰 경제</button>
-            <button class="category-filter" data-category="tech_outage" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">💻 기술 장애</button>
-            <button class="category-filter" data-category="cyber_attack" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">🛡️ 사이버 공격</button>
-            <button class="category-filter" data-category="censorship" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">🚫 검열</button>
-            <button class="category-filter" data-category="sports_event" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">⚽ 스포츠 이벤트</button>
-            <button class="category-filter" data-category="election" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">🗳️ 선거</button>
-            <button class="category-filter" data-category="pandemic" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">🦠 팬데믹</button>
-            <button class="category-filter" data-category="infrastructure_damage" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">🏗️ 인프라 손상</button>
-            <button class="category-filter" data-category="competitor_game" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">🎯 경쟁 게임</button>
-            <button class="category-filter" data-category="social_trend" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">📱 소셜 트렌드</button>
-            <button class="category-filter" data-category="major_event" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">🎪 주요 이벤트</button>
-            <button class="category-filter" data-category="other" style="padding:6px 12px;background:var(--panel);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">📋 기타</button>
+          <!-- 카테고리 필터 (그룹별) -->
+          <div style="margin-bottom:16px">
+            <strong style="color:var(--text);font-size:13px;display:block;margin-bottom:8px">카테고리:</strong>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+              <button class="category-filter active" data-category="all" data-group="all" style="padding:6px 12px;background:linear-gradient(135deg,#238636,#2ea043);border:none;border-radius:6px;color:#fff;font-size:12px;cursor:pointer;font-weight:600">전체</button>
+              
+              <!-- 🔴 장애 및 차단 -->
+              <button class="category-filter" data-category="outage_block" data-group="outage_block" style="padding:6px 12px;background:var(--panel);border:2px solid #ff4757;border-radius:6px;color:#ff4757;font-size:12px;cursor:pointer;font-weight:600">🔴 장애 및 차단</button>
+              
+              <!-- 🟠 사회적 위기 -->
+              <button class="category-filter" data-category="social_crisis" data-group="social_crisis" style="padding:6px 12px;background:var(--panel);border:2px solid #ffa502;border-radius:6px;color:#ffa502;font-size:12px;cursor:pointer;font-weight:600">🟠 사회적 위기</button>
+              
+              <!-- 🟢 시즌 및 일정 -->
+              <button class="category-filter" data-category="seasonal_calendar" data-group="seasonal_calendar" style="padding:6px 12px;background:var(--panel);border:2px solid #2ed573;border-radius:6px;color:#2ed573;font-size:12px;cursor:pointer;font-weight:600">🟢 시즌 및 일정</button>
+              
+              <!-- 🔵 게임 및 경쟁 -->
+              <button class="category-filter" data-category="gaming_competitor" data-group="gaming_competitor" style="padding:6px 12px;background:var(--panel);border:2px solid #5352ed;border-radius:6px;color:#5352ed;font-size:12px;cursor:pointer;font-weight:600">🔵 게임 및 경쟁</button>
+              
+              <!-- ⚪ 기타 -->
+              <button class="category-filter" data-category="other" data-group="other" style="padding:6px 12px;background:var(--panel);border:2px solid #95a5a6;border-radius:6px;color:#95a5a6;font-size:12px;cursor:pointer;font-weight:600">⚪ 기타</button>
+            </div>
           </div>
           <div id="newsList">
             <div class="empty-state">
@@ -1472,6 +1467,15 @@
     let allNewsData = []; // 전체 뉴스 데이터 저장
     let currentCategoryFilter = 'all'; // 현재 선택된 카테고리
     
+    // 그룹별 색상 정의
+    const groupColors = {
+      'outage_block': '#ff4757',
+      'social_crisis': '#ffa502',
+      'seasonal_calendar': '#2ed573',
+      'gaming_competitor': '#5352ed',
+      'other': '#95a5a6'
+    };
+    
     // CSV에서 뉴스 로드
     async function loadNewsFromCSV(){
       const newsList = document.getElementById('newsList');
@@ -1504,6 +1508,7 @@
               url: row.url || '#',
               source: row.source || 'Unknown',
               category: row.category || 'other',
+              category_group: row.category_group || 'other',
               traffic_impact: row.traffic_impact || ''
             }));
             
@@ -1533,13 +1538,14 @@
       }
     }
     
-    // 카테고리별 필터링
+    // 카테고리별 필터링 (그룹 카테고리 기준)
     function filterNewsByCategory(category){
       currentCategoryFilter = category;
       
       let filteredNews = allNewsData;
       if(category !== 'all'){
-        filteredNews = allNewsData.filter(news => news.category === category);
+        // 그룹 카테고리로 필터링
+        filteredNews = allNewsData.filter(news => news.category_group === category);
       }
       
       // 날짜순 정렬 (최신순)
@@ -1555,14 +1561,28 @@
       document.querySelectorAll('.category-filter').forEach(btn => {
         if(btn.dataset.category === category){
           btn.classList.add('active');
-          btn.style.background = 'linear-gradient(135deg,#238636,#2ea043)';
-          btn.style.color = '#fff';
-          btn.style.border = 'none';
+          if(category === 'all'){
+            btn.style.background = 'linear-gradient(135deg,#238636,#2ea043)';
+            btn.style.color = '#fff';
+            btn.style.border = 'none';
+          } else {
+            const groupColor = groupColors[category] || groupColors['other'];
+            btn.style.background = groupColor;
+            btn.style.color = '#fff';
+            btn.style.border = `2px solid ${groupColor}`;
+          }
         } else {
           btn.classList.remove('active');
-          btn.style.background = 'var(--panel)';
-          btn.style.color = 'var(--text)';
-          btn.style.border = '1px solid var(--border)';
+          if(btn.dataset.category === 'all'){
+            btn.style.background = 'linear-gradient(135deg,#238636,#2ea043)';
+            btn.style.color = '#fff';
+            btn.style.border = 'none';
+          } else {
+            const groupColor = groupColors[btn.dataset.category] || groupColors['other'];
+            btn.style.background = 'var(--panel)';
+            btn.style.color = groupColor;
+            btn.style.border = `2px solid ${groupColor}`;
+          }
         }
       });
     }
@@ -1880,42 +1900,30 @@
       const newsList = document.getElementById('newsList');
       
       if(newsArray.length > 0){
-        // 카테고리별 아이콘 및 색상
-        const categoryInfo = {
-          'gaming': { icon: '🎮', color: '#238636' },
-          'holiday': { icon: '🎉', color: '#ff6b6b' },
-          'school_calendar': { icon: '📚', color: '#4ecdc4' },
-          'war_conflict': { icon: '⚔️', color: '#ff4757' },
-          'terrorism_explosion': { icon: '💣', color: '#c44569' },
-          'protest_strike': { icon: '📢', color: '#ff6348' },
-          'natural_disaster': { icon: '🌊', color: '#5352ed' },
-          'internet_shutdown': { icon: '📡', color: '#ffa502' },
-          'power_outage': { icon: '⚡', color: '#ffd32a' },
-          'curfew': { icon: '🚫', color: '#c44569' },
-          'economic': { icon: '💰', color: '#feca57' },
-          'tech_outage': { icon: '💻', color: '#5f27cd' },
-          'cyber_attack': { icon: '🛡️', color: '#ee5a6f' },
-          'censorship': { icon: '🚫', color: '#c44569' },
-          'sports_event': { icon: '⚽', color: '#00d2d3' },
-          'election': { icon: '🗳️', color: '#3742fa' },
-          'pandemic': { icon: '🦠', color: '#ff6348' },
-          'infrastructure_damage': { icon: '🏗️', color: '#747d8c' },
-          'competitor_game': { icon: '🎯', color: '#ff9ff3' },
-          'social_trend': { icon: '📱', color: '#54a0ff' },
-          'major_event': { icon: '🎪', color: '#ff6b81' },
-          'other': { icon: '📋', color: '#95a5a6' }
+        // 세부 카테고리 아이콘
+        const categoryIcons = {
+          'internet_shutdown': '📡', 'tech_outage': '💻', 'power_outage': '⚡',
+          'censorship': '🚫', 'cyber_attack': '🛡️', 'infrastructure_damage': '🏗️',
+          'war_conflict': '⚔️', 'terrorism_explosion': '💣', 'natural_disaster': '🌊',
+          'protest_strike': '📢', 'curfew': '🚫', 'pandemic': '🦠', 'economic': '💰',
+          'holiday': '🎉', 'school_calendar': '📚', 'election': '🗳️',
+          'gaming': '🎮', 'competitor_game': '🎯', 'social_trend': '📱',
+          'sports_event': '⚽', 'major_event': '🎪',
+          'other': '📋'
         };
         
         newsList.innerHTML = newsArray.map(news => {
-          const catInfo = categoryInfo[news.category] || categoryInfo['other'];
+          const groupColor = groupColors[news.category_group] || groupColors['other'];
+          const categoryIcon = categoryIcons[news.category] || categoryIcons['other'];
+          const categoryName = news.category.replace(/_/g, ' ');
           
           return `
           <div class="news-item">
             <div class="news-content">
               <div class="news-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
                 <a href="${news.url}" target="_blank" rel="noopener noreferrer" style="flex:1;min-width:200px">${news.title}</a>
-                <span style="padding:4px 10px;background:${catInfo.color}20;border:1px solid ${catInfo.color};border-radius:4px;font-size:11px;color:${catInfo.color};white-space:nowrap">
-                  ${catInfo.icon} ${news.category.replace('_', ' ')}
+                <span style="padding:4px 10px;background:${groupColor}20;border:1px solid ${groupColor};border-radius:4px;font-size:11px;color:${groupColor};white-space:nowrap">
+                  ${categoryIcon} ${categoryName}
                 </span>
                 ${news.country ? `<span style="padding:4px 10px;background:rgba(35,134,54,0.1);border:1px solid #238636;border-radius:4px;font-size:11px;color:#238636;white-space:nowrap">🌍 ${news.country}</span>` : ''}
               </div>
