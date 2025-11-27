@@ -1204,13 +1204,20 @@
                   if(treemapDiv.data && treemapDiv.data.length > 0){
                     Plotly.Plots.resize(treemapDivId);
                   } else {
-                    // 트리맵이 없으면 다시 렌더링
+                    // 트리맵이 없으면 다시 렌더링 (샘플 데이터 사용)
                     createTreemap(currentData, mainTab);
                   }
                 } else {
-                  // 트리맵이 보이지 않으면 렌더링
+                  // 트리맵이 보이지 않으면 렌더링 (샘플 데이터 사용)
                   createTreemap(currentData, mainTab);
                 }
+              }, 100);
+            } else if((mainTab === 'traffic' || mainTab === 'revenue') && !currentData){
+              // currentData가 없으면 샘플 데이터 생성
+              const sampleData = generateSampleData();
+              currentData = sampleData;
+              setTimeout(() => {
+                createTreemap(currentData, mainTab);
               }, 100);
             }
           }
@@ -1240,6 +1247,11 @@
           setTimeout(() => {
             const treemapDivId = mainTab === 'revenue' ? 'treemap-revenue' : 'treemap';
             const treemapDiv = document.getElementById(treemapDivId);
+            // currentData가 없으면 샘플 데이터 생성
+            if(!currentData){
+              const sampleData = generateSampleData();
+              currentData = sampleData;
+            }
             if(treemapDiv && treemapDiv.offsetParent !== null){
               if(treemapDiv.data && treemapDiv.data.length > 0){
                 Plotly.Plots.resize(treemapDivId);
