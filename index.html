@@ -1195,30 +1195,31 @@
             if(subTabButton) subTabButton.classList.add('active');
             
             // Traffic 또는 Revenue 탭으로 돌아올 때 트리맵 다시 렌더링
-            if((mainTab === 'traffic' || mainTab === 'revenue') && currentData){
+            if(mainTab === 'traffic' || mainTab === 'revenue'){
               setTimeout(() => {
+                // currentData가 없으면 샘플 데이터 생성
+                if(!currentData){
+                  const sampleData = generateSampleData();
+                  currentData = sampleData;
+                }
+                
                 const treemapDivId = mainTab === 'revenue' ? 'treemap-revenue' : 'treemap';
                 const treemapDiv = document.getElementById(treemapDivId);
-                if(treemapDiv && treemapDiv.offsetParent !== null){
-                  // Plotly가 이미 렌더링되어 있으면 리사이즈
+                
+                // 항상 트리맵 렌더링 (Revenue 탭은 항상 새로 렌더링)
+                if(mainTab === 'revenue'){
+                  createTreemap(currentData, mainTab);
+                } else if(treemapDiv && treemapDiv.offsetParent !== null){
+                  // Traffic 탭은 이미 렌더링되어 있으면 리사이즈만
                   if(treemapDiv.data && treemapDiv.data.length > 0){
                     Plotly.Plots.resize(treemapDivId);
                   } else {
-                    // 트리맵이 없으면 다시 렌더링 (샘플 데이터 사용)
                     createTreemap(currentData, mainTab);
                   }
                 } else {
-                  // 트리맵이 보이지 않으면 렌더링 (샘플 데이터 사용)
                   createTreemap(currentData, mainTab);
                 }
-              }, 100);
-            } else if((mainTab === 'traffic' || mainTab === 'revenue') && !currentData){
-              // currentData가 없으면 샘플 데이터 생성
-              const sampleData = generateSampleData();
-              currentData = sampleData;
-              setTimeout(() => {
-                createTreemap(currentData, mainTab);
-              }, 100);
+              }, 150);
             }
           }
         }
