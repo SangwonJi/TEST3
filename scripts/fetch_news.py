@@ -878,10 +878,10 @@ def main():
             all_raw_news.extend(news)
             time.sleep(1)  # API 부하 방지
         
-        # 주요 국가별 검색
+        # 주요 국가별 검색 (제한: 각 국가당 최대 5개 키워드)
         for country, country_info in priority_countries.items():
-            # 국가 키워드
-            for keyword in country_info.get('keywords', []):
+            # 국가 키워드 (최대 2개)
+            for keyword in country_info.get('keywords', [])[:2]:
                 news = fetch_news_from_rss(keyword)
                 for item in news:
                     item['country'] = country
@@ -889,8 +889,8 @@ def main():
                 all_raw_news.extend(news)
                 time.sleep(1)
             
-            # 국가별 주제 키워드
-            for topic in country_info.get('topics', []):
+            # 국가별 주제 키워드 (최대 3개)
+            for topic in country_info.get('topics', [])[:3]:
                 keyword = f"{country} {topic}"
                 news = fetch_news_from_rss(keyword)
                 for item in news:
@@ -899,11 +899,18 @@ def main():
                 all_raw_news.extend(news)
                 time.sleep(1)
         
-        # 트래픽 영향 키워드 검색
+        # 트래픽 영향 키워드 검색 (제한: 각 카테고리당 최대 2개, 총 20개 이하)
+        keyword_count = 0
+        max_traffic_keywords = 20
         for category, keywords in traffic_impact_keywords.items():
-            for keyword in keywords[:3]:  # 각 카테고리당 최대 3개 키워드
+            if keyword_count >= max_traffic_keywords:
+                break
+            for keyword in keywords[:2]:  # 각 카테고리당 최대 2개 키워드
+                if keyword_count >= max_traffic_keywords:
+                    break
                 news = fetch_news_from_rss(keyword)
                 all_raw_news.extend(news)
+                keyword_count += 1
                 time.sleep(1)
         
         logger.info(f"RSS 수집 완료: {len(all_raw_news)}개 뉴스")
@@ -923,9 +930,16 @@ def main():
         all_refined_news = []
         skipped_count = 0
         
-        for i, news_item in enumerate(all_raw_news, 1):
+        # AI 정제는 최대 100개까지만 (너무 많으면 시간이 오래 걸림)
+        max_refine_count = 100
+        news_to_refine = all_raw_news[:max_refine_count]
+        
+        if len(all_raw_news) > max_refine_count:
+            logger.warning(f"수집된 뉴스가 너무 많습니다 ({len(all_raw_news)}개). 최신 {max_refine_count}개만 정제합니다.")
+        
+        for i, news_item in enumerate(news_to_refine, 1):
             if i % 10 == 0:
-                logger.info(f"정제 진행 중: {i}/{len(all_raw_news)}")
+                logger.info(f"정제 진행 중: {i}/{len(news_to_refine)}")
             
             refined = refine_news_with_ai(news_item, api_type)
             
@@ -935,6 +949,16 @@ def main():
                 all_refined_news.append(refined)
             
             time.sleep(1)  # API Rate Limit 방지
+        
+        # 정제하지 않은 나머지 뉴스는 기본 카테고리로 추가
+        if len(all_raw_news) > max_refine_count:
+            remaining_news = all_raw_news[max_refine_count:]
+            for item in remaining_news:
+                if not item.get('category'):
+                    item['category'] = 'other'
+                    item['category_group'] = 'other'
+            all_refined_news.extend(remaining_news)
+            logger.info(f"추가 {len(remaining_news)}개 뉴스를 기본 카테고리로 추가했습니다.")
         
         logger.info(f"AI 정제 완료: {len(all_refined_news)}개 (스킵: {skipped_count}개)")
         
