@@ -26,8 +26,11 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
       
-      - name: Run news collection script
+      - name: Run news collection script (RSS only)
         id: collect_news
+        env:
+          NEWS_API_TYPE: rss
+          # API 키는 사용하지 않음 (RSS만 사용)
         run: |
           python scripts/fetch_news.py
           exit_code=$?
