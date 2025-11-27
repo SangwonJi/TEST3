@@ -954,9 +954,12 @@ def main():
         if len(all_raw_news) > max_refine_count:
             remaining_news = all_raw_news[max_refine_count:]
             for item in remaining_news:
+                # category가 없으면 기본값 설정
                 if not item.get('category'):
                     item['category'] = 'other'
-                    item['category_group'] = 'other'
+                # category_group이 없으면 자동 매핑
+                if not item.get('category_group'):
+                    item['category_group'] = map_to_group_category(item.get('category', 'other'))
             all_refined_news.extend(remaining_news)
             logger.info(f"추가 {len(remaining_news)}개 뉴스를 기본 카테고리로 추가했습니다.")
         

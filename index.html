@@ -107,7 +107,16 @@
 <body>
     <div class="container">
         <div class="header">
-      <h1>🌍 Traffic by Country</h1>
+      <h1>PUBGM 글로벌 추이</h1>
+        </div>
+        
+        <!-- 상위 탭: Traffic, Revenue, News -->
+        <div class="tabs-container" style="background:var(--panel);border-bottom:1px solid var(--border);padding:0">
+          <div class="tabs">
+            <button class="tab-button active" data-main-tab="traffic">📊 Traffic</button>
+            <button class="tab-button" data-main-tab="revenue">💰 Revenue</button>
+            <button class="tab-button" data-main-tab="news">📰 News</button>
+          </div>
         </div>
         
         <div class="toolbar">
@@ -116,12 +125,12 @@
       <div class="status-badge" id="status">Sample Data (250 Countries)</div>
     </div>
 
-    <div class="tabs-container">
-      <div class="tabs">
-        <button class="tab-button active" data-tab="treemap">📊 Treemap</button>
-        <button class="tab-button" data-tab="risers-fallers">📈 Risers/Fallers</button>
-        <button class="tab-button" data-tab="country-detail">🌍 Country Detail</button>
-        <button class="tab-button" data-tab="news">📰 News & Headlines</button>
+    <!-- 하위 탭: Treemap, Risers/Fallers, Country Detail (Traffic/Revenue용) -->
+    <div class="tabs-container" id="subTabsContainer" style="background:var(--panel);border-bottom:1px solid var(--border);padding:0">
+      <div class="tabs" id="subTabs">
+        <button class="tab-button active" data-sub-tab="treemap">📊 Treemap</button>
+        <button class="tab-button" data-sub-tab="risers-fallers">📈 Risers/Fallers</button>
+        <button class="tab-button" data-sub-tab="country-detail">🌍 Country Detail</button>
       </div>
     </div>
 
@@ -156,8 +165,8 @@
         </div>
         
         <div class="content">
-      <!-- Treemap Tab -->
-      <div class="tab-content active" id="tab-treemap">
+      <!-- Traffic/Revenue: Treemap Tab -->
+      <div class="tab-content active" data-main-tab="traffic" data-sub-tab="treemap" id="tab-treemap">
         <div class="stats-grid" id="stats"></div>
         <div id="treemap">
           <div class="loading-overlay" id="loadingOverlay">
@@ -218,8 +227,8 @@
         </div>
       </div>
 
-      <!-- Risers/Fallers Tab -->
-      <div class="tab-content" id="tab-risers-fallers">
+      <!-- Traffic/Revenue: Risers/Fallers Tab -->
+      <div class="tab-content" data-main-tab="traffic" data-sub-tab="risers-fallers" id="tab-risers-fallers">
         <div style="margin-bottom:20px;padding:16px;background:var(--panel);border:1px solid var(--border);border-radius:8px">
           <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
             <label style="display:flex;align-items:center;gap:8px">
@@ -254,8 +263,8 @@
         </div>
       </div>
 
-      <!-- Country Detail Tab -->
-      <div class="tab-content" id="tab-country-detail">
+      <!-- Traffic/Revenue: Country Detail Tab -->
+      <div class="tab-content" data-main-tab="traffic" data-sub-tab="country-detail" id="tab-country-detail">
         <div class="country-detail-container">
           <!-- 빠른 선택: Top 10 국가 -->
           <div class="quick-select-section">
@@ -292,8 +301,32 @@
         </div>
       </div>
 
-      <!-- News & Headlines Tab -->
-      <div class="tab-content" id="tab-news">
+      <!-- Revenue: Treemap Tab -->
+      <div class="tab-content" data-main-tab="revenue" data-sub-tab="treemap" id="tab-revenue-treemap">
+        <div class="empty-state">
+          <div class="empty-state-icon">💰</div>
+          <div>Revenue 데이터 준비 중...</div>
+        </div>
+      </div>
+
+      <!-- Revenue: Risers/Fallers Tab -->
+      <div class="tab-content" data-main-tab="revenue" data-sub-tab="risers-fallers" id="tab-revenue-risers-fallers">
+        <div class="empty-state">
+          <div class="empty-state-icon">💰</div>
+          <div>Revenue Risers/Fallers 데이터 준비 중...</div>
+        </div>
+      </div>
+
+      <!-- Revenue: Country Detail Tab -->
+      <div class="tab-content" data-main-tab="revenue" data-sub-tab="country-detail" id="tab-revenue-country-detail">
+        <div class="empty-state">
+          <div class="empty-state-icon">💰</div>
+          <div>Revenue Country Detail 데이터 준비 중...</div>
+        </div>
+      </div>
+
+      <!-- News Tab -->
+      <div class="tab-content" data-main-tab="news" id="tab-news">
         <div class="news-container">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
             <div class="section-title" style="margin:0">📰 News & Headlines</div>
@@ -1045,25 +1078,66 @@
     }
 
     // ---------- Tab Management ----------
-    document.querySelectorAll('.tab-button').forEach(button => {
+    // 상위 탭 클릭 핸들러 (Traffic, Revenue, News)
+    document.querySelectorAll('[data-main-tab]').forEach(button => {
       button.addEventListener('click', () => {
-        const tabName = button.getAttribute('data-tab');
+        const mainTab = button.getAttribute('data-main-tab');
         
-        // Remove active class from all buttons and contents
-        document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+        // 상위 탭 활성화
+        document.querySelectorAll('[data-main-tab]').forEach(btn => btn.classList.remove('active'));
+        button.classList.add('active');
+        
+        // 하위 탭 컨테이너 표시/숨김
+        const subTabsContainer = document.getElementById('subTabsContainer');
+        if(mainTab === 'news'){
+          subTabsContainer.style.display = 'none';
+        } else {
+          subTabsContainer.style.display = 'block';
+        }
+        
+        // 모든 탭 콘텐츠 숨김
         document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
         
-        // Add active class to clicked button and corresponding content
-        button.classList.add('active');
-        document.getElementById(`tab-${tabName}`).classList.add('active');
-        
-        // Update content based on tab
-        if(tabName === 'risers-fallers'){
-          updateRisersFallers(currentData);
-        } else if(tabName === 'country-detail'){
-          updateCountrySelect(currentData);
-        } else if(tabName === 'news'){
+        // 해당 상위 탭의 첫 번째 하위 탭 활성화
+        if(mainTab === 'news'){
+          document.getElementById('tab-news').classList.add('active');
           loadNewsForRisersFallers(currentData);
+        } else {
+          // Traffic 또는 Revenue: 첫 번째 하위 탭 활성화
+          const firstSubTab = document.querySelector(`[data-main-tab="${mainTab}"][data-sub-tab="treemap"]`) || 
+                              document.querySelector('[data-sub-tab="treemap"]');
+          if(firstSubTab){
+            firstSubTab.classList.add('active');
+            // 하위 탭 버튼도 활성화
+            document.querySelectorAll('[data-sub-tab]').forEach(btn => btn.classList.remove('active'));
+            const subTabButton = document.querySelector('[data-sub-tab="treemap"]');
+            if(subTabButton) subTabButton.classList.add('active');
+          }
+        }
+      });
+    });
+    
+    // 하위 탭 클릭 핸들러 (Treemap, Risers/Fallers, Country Detail)
+    document.querySelectorAll('[data-sub-tab]').forEach(button => {
+      button.addEventListener('click', () => {
+        const subTab = button.getAttribute('data-sub-tab');
+        const mainTab = document.querySelector('[data-main-tab].active')?.getAttribute('data-main-tab') || 'traffic';
+        
+        // 하위 탭 버튼 활성화
+        document.querySelectorAll('[data-sub-tab]').forEach(btn => btn.classList.remove('active'));
+        button.classList.add('active');
+        
+        // 해당 하위 탭 콘텐츠 활성화
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        const targetContent = document.querySelector(`[data-main-tab="${mainTab}"][data-sub-tab="${subTab}"]`) ||
+                             document.querySelector(`[data-sub-tab="${subTab}"]`);
+        if(targetContent) targetContent.classList.add('active');
+        
+        // 콘텐츠 업데이트
+        if(subTab === 'risers-fallers'){
+          updateRisersFallers(currentData);
+        } else if(subTab === 'country-detail'){
+          updateCountrySelect(currentData);
         }
       });
     });
@@ -1215,7 +1289,7 @@
         btn.addEventListener('click', () => {
           const country = btn.getAttribute('data-country');
           // Country Detail 탭으로 이동
-          document.querySelector('[data-tab="country-detail"]').click();
+          document.querySelector('[data-sub-tab="country-detail"]').click();
           setTimeout(() => {
             showCountryDetail(data, country);
             // 검색 입력창에도 표시
@@ -1310,15 +1384,19 @@
     function selectCountryFromExternal(country){
       if(!country || !currentData) return;
       
-      // Country Detail 탭으로 이동
-      const tabButton = document.querySelector('[data-tab="country-detail"]');
-      if(tabButton){
-        tabButton.click();
-        setTimeout(() => {
-          showCountryDetail(currentData, country);
-          document.getElementById('countrySearch').value = country;
-        }, 100);
-      }
+      // Traffic 탭으로 이동하고 Country Detail 하위 탭 활성화
+      const trafficTab = document.querySelector('[data-main-tab="traffic"]');
+      if(trafficTab) trafficTab.click();
+      setTimeout(() => {
+        const subTabButton = document.querySelector('[data-sub-tab="country-detail"]');
+        if(subTabButton){
+          subTabButton.click();
+          setTimeout(() => {
+            showCountryDetail(currentData, country);
+            document.getElementById('countrySearch').value = country;
+          }, 50);
+        }
+      }, 50);
     }
 
     function showCountryDetail(data, country){
