@@ -5,7 +5,19 @@ config.js
 .env
 .env.local
 
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+
 # 기타
 node_modules/
 *.log
+*.csv.bak
 

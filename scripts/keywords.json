@@ -1,0 +1,28 @@
+{
+  "base_keywords": [
+    "PUBG Mobile",
+    "PUBG Esports",
+    "Krafton",
+    "Battlegrounds Mobile"
+  ],
+  "country_keywords": {
+    "USA": ["PUBG Mobile USA", "PUBG Mobile United States"],
+    "China": ["PUBG Mobile China", "PUBG Mobile 中国"],
+    "India": ["PUBG Mobile India"],
+    "Korea": ["PUBG Mobile Korea", "PUBG Mobile 한국"],
+    "Japan": ["PUBG Mobile Japan", "PUBG Mobile 日本"],
+    "Brazil": ["PUBG Mobile Brazil", "PUBG Mobile Brasil"],
+    "Germany": ["PUBG Mobile Germany", "PUBG Mobile Deutschland"],
+    "UK": ["PUBG Mobile UK", "PUBG Mobile United Kingdom"],
+    "France": ["PUBG Mobile France"],
+    "Russia": ["PUBG Mobile Russia", "PUBG Mobile Россия"]
+  },
+  "categories": [
+    "gaming",
+    "esports",
+    "mobile gaming",
+    "game updates",
+    "tournament"
+  ]
+}
+
