@@ -104,27 +104,18 @@
       <h1>PUBGM 글로벌 추이</h1>
         </div>
         
-        <!-- 상위 탭: Traffic, Revenue, News -->
-        <div class="tabs-container" style="background:var(--panel);border-bottom:1px solid var(--border);padding:0">
-          <div class="tabs">
-            <button class="tab-button active" data-main-tab="traffic">📊 Traffic</button>
-            <button class="tab-button" data-main-tab="revenue">💰 Revenue</button>
-            <button class="tab-button" data-main-tab="news">📰 News</button>
-          </div>
-        </div>
-        
         <div class="toolbar">
       <input type="file" id="csvFile" accept=".csv"/>
       <button id="btnLoad">📁 Load CSV</button>
       <div class="status-badge" id="status">Sample Data (250 Countries)</div>
     </div>
 
-    <!-- 하위 탭: Treemap, Risers/Fallers, Country Detail (Traffic/Revenue용) -->
-    <div class="tabs-container" id="subTabsContainer" style="background:var(--panel);border-bottom:1px solid var(--border);padding:0">
-      <div class="tabs" id="subTabs">
-        <button class="tab-button active" data-sub-tab="treemap">📊 Treemap</button>
-        <button class="tab-button" data-sub-tab="risers-fallers">📈 Risers/Fallers</button>
-        <button class="tab-button" data-sub-tab="country-detail">🌍 Country Detail</button>
+    <div class="tabs-container">
+      <div class="tabs">
+        <button class="tab-button active" data-tab="treemap">📊 Treemap</button>
+        <button class="tab-button" data-tab="risers-fallers">📈 Risers/Fallers</button>
+        <button class="tab-button" data-tab="country-detail">🌍 Country Detail</button>
+        <button class="tab-button" data-tab="news">📰 News & Headlines</button>
       </div>
     </div>
 
@@ -159,8 +150,8 @@
         </div>
         
         <div class="content">
-      <!-- Traffic/Revenue: Treemap Tab -->
-      <div class="tab-content active" data-main-tab="traffic" data-sub-tab="treemap" id="tab-treemap">
+      <!-- Treemap Tab -->
+      <div class="tab-content active" id="tab-treemap">
         <div class="stats-grid" id="stats"></div>
         <div id="treemap">
           <div class="loading-overlay" id="loadingOverlay">
@@ -221,8 +212,8 @@
         </div>
       </div>
 
-      <!-- Traffic/Revenue: Risers/Fallers Tab -->
-      <div class="tab-content" data-main-tab="traffic" data-sub-tab="risers-fallers" id="tab-risers-fallers">
+      <!-- Risers/Fallers Tab -->
+      <div class="tab-content" id="tab-risers-fallers">
         <div style="margin-bottom:20px;padding:16px;background:var(--panel);border:1px solid var(--border);border-radius:8px">
           <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
             <label style="display:flex;align-items:center;gap:8px">
@@ -257,8 +248,8 @@
         </div>
       </div>
 
-      <!-- Traffic/Revenue: Country Detail Tab -->
-      <div class="tab-content" data-main-tab="traffic" data-sub-tab="country-detail" id="tab-country-detail">
+      <!-- Country Detail Tab -->
+      <div class="tab-content" id="tab-country-detail">
         <div class="country-detail-container">
           <!-- 빠른 선택: Top 10 국가 -->
           <div class="quick-select-section">
@@ -295,86 +286,8 @@
         </div>
       </div>
 
-      <!-- Revenue: Treemap Tab -->
-      <div class="tab-content" data-main-tab="revenue" data-sub-tab="treemap" id="tab-revenue-treemap">
-        <div class="stats-grid" id="stats-revenue"></div>
-        <div id="treemap-revenue">
-          <div class="loading-overlay" id="loadingOverlay-revenue">
-            <div class="loading-spinner"></div>
-            <div class="loading-text" style="color:var(--muted)">데이터를 생성하고 있습니다...</div>
-          </div>
-        </div>
-        <div class="color-palette" style="margin-top:20px;padding:16px;background:var(--panel);border:1px solid var(--border);border-radius:8px">
-          <div style="font-size:12px;color:var(--muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600">Color Palette</div>
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <div class="palette-item" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg);border-radius:6px;border:1px solid var(--border)">
-              <div style="width:24px;height:24px;background:#f63538;border-radius:4px;border:1px solid rgba(255,255,255,0.1)"></div>
-              <span style="color:#fff;font-size:13px;font-weight:600">-3%</span>
-            </div>
-            <div class="palette-item" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg);border-radius:6px;border:1px solid var(--border)">
-              <div style="width:24px;height:24px;background:#bf4045;border-radius:4px;border:1px solid rgba(255,255,255,0.1)"></div>
-              <span style="color:#fff;font-size:13px;font-weight:600">-2%</span>
-            </div>
-            <div class="palette-item" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg);border-radius:6px;border:1px solid var(--border)">
-              <div style="width:24px;height:24px;background:#8b444e;border-radius:4px;border:1px solid rgba(255,255,255,0.1)"></div>
-              <span style="color:#fff;font-size:13px;font-weight:600">-1%</span>
-            </div>
-            <div class="palette-item" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg);border-radius:6px;border:1px solid var(--border)">
-              <div style="width:24px;height:24px;background:#414554;border-radius:4px;border:1px solid rgba(255,255,255,0.1)"></div>
-              <span style="color:#fff;font-size:13px;font-weight:600">0%</span>
-            </div>
-            <div class="palette-item" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg);border-radius:6px;border:1px solid var(--border)">
-              <div style="width:24px;height:24px;background:#3e7c55;border-radius:4px;border:1px solid rgba(255,255,255,0.1)"></div>
-              <span style="color:#fff;font-size:13px;font-weight:600">+1%</span>
-            </div>
-            <div class="palette-item" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg);border-radius:6px;border:1px solid var(--border)">
-              <div style="width:24px;height:24px;background:#2f9e4f;border-radius:4px;border:1px solid rgba(255,255,255,0.1)"></div>
-              <span style="color:#fff;font-size:13px;font-weight:600">+2%</span>
-            </div>
-            <div class="palette-item" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg);border-radius:6px;border:1px solid var(--border)">
-              <div style="width:24px;height:24px;background:#30cc5a;border-radius:4px;border:1px solid rgba(255,255,255,0.1)"></div>
-              <span style="color:#fff;font-size:13px;font-weight:600">+3%</span>
-            </div>
-          </div>
-        </div>
-        <div id="revenueTop10" style="margin-top:20px;padding:16px;background:var(--panel);border:1px solid var(--border);border-radius:8px">
-          <div id="revenueTop10Title" style="font-size:16px;color:var(--muted);margin-bottom:16px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600">Revenue Top 10 (DoD 기준)</div>
-          <div style="overflow-x:auto">
-            <table style="width:100%;border-collapse:collapse">
-              <thead>
-                <tr style="border-bottom:1px solid var(--border)">
-                  <th style="padding:12px;text-align:left;font-size:14px;color:var(--muted);font-weight:600">Rank</th>
-                  <th style="padding:12px;text-align:left;font-size:14px;color:var(--muted);font-weight:600">Country</th>
-                  <th style="padding:12px;text-align:right;font-size:14px;color:var(--muted);font-weight:600">Revenue</th>
-                  <th style="padding:12px;text-align:right;font-size:14px;color:var(--muted);font-weight:600">Change</th>
-                </tr>
-              </thead>
-              <tbody id="revenueTop10Body">
-                <tr><td colspan="4" style="padding:16px;text-align:center;color:var(--muted);font-size:14px">Loading...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- Revenue: Risers/Fallers Tab -->
-      <div class="tab-content" data-main-tab="revenue" data-sub-tab="risers-fallers" id="tab-revenue-risers-fallers">
-        <div class="empty-state">
-          <div class="empty-state-icon">💰</div>
-          <div>Revenue Risers/Fallers 데이터 준비 중...</div>
-        </div>
-      </div>
-
-      <!-- Revenue: Country Detail Tab -->
-      <div class="tab-content" data-main-tab="revenue" data-sub-tab="country-detail" id="tab-revenue-country-detail">
-        <div class="empty-state">
-          <div class="empty-state-icon">💰</div>
-          <div>Revenue Country Detail 데이터 준비 중...</div>
-        </div>
-      </div>
-
-      <!-- News Tab -->
-      <div class="tab-content" data-main-tab="news" id="tab-news">
+      <!-- News & Headlines Tab -->
+      <div class="tab-content" id="tab-news">
         <div class="news-container">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
             <div class="section-title" style="margin:0">📰 News & Headlines</div>
@@ -557,8 +470,7 @@
           if(p){ 
             currentData=p; 
             document.getElementById('status').textContent='CSV Loaded'; 
-            const activeMainTab = document.querySelector('[data-main-tab].active')?.getAttribute('data-main-tab') || 'traffic';
-            createTreemap(currentData, activeMainTab);
+            createTreemap(currentData);
             // Update other tabs if they are active
             if(document.getElementById('tab-risers-fallers').classList.contains('active')){
               updateRisersFallers(currentData);
@@ -655,8 +567,7 @@
       if(p){
         currentData = p;
         document.getElementById('status').textContent = `CSV Loaded (${filteredRows.length} rows, ${startDate} ~ ${endDate})`;
-        const activeMainTab = document.querySelector('[data-main-tab].active')?.getAttribute('data-main-tab') || 'traffic';
-        createTreemap(currentData, activeMainTab);
+        createTreemap(currentData);
         // Update other tabs if they are active
         if(document.getElementById('tab-risers-fallers').classList.contains('active')){
           updateRisersFallers(currentData);
@@ -679,8 +590,7 @@
         if(p){
           currentData = p;
           document.getElementById('status').textContent = 'CSV Loaded';
-          const activeMainTab = document.querySelector('[data-main-tab].active')?.getAttribute('data-main-tab') || 'traffic';
-          createTreemap(currentData, activeMainTab);
+          createTreemap(currentData);
           // Update other tabs if they are active
           if(document.getElementById('tab-risers-fallers').classList.contains('active')){
             updateRisersFallers(currentData);
@@ -960,23 +870,11 @@
     // ---------- Render ----------
     const overlay=document.getElementById('loadingOverlay');
     ['topCount','sortBy','groupByContinent','comparisonType'].forEach(id=>{
-      document.getElementById(id).addEventListener('change', ()=> {
-        const mainTab = document.querySelector('[data-main-tab].active')?.getAttribute('data-main-tab') || 'traffic';
-        createTreemap(currentData, mainTab);
-      });
+      document.getElementById(id).addEventListener('change', ()=> createTreemap(currentData));
     });
 
-    function createTreemap(data, mainTab = 'traffic'){
-      // mainTab에 따라 다른 div ID 사용
-      const treemapDivId = mainTab === 'revenue' ? 'treemap-revenue' : 'treemap';
-      const statsDivId = mainTab === 'revenue' ? 'stats-revenue' : 'stats';
-      const overlayId = mainTab === 'revenue' ? 'loadingOverlay-revenue' : 'loadingOverlay';
-      const top10DivId = mainTab === 'revenue' ? 'revenueTop10' : 'trafficTop10';
-      const top10TitleId = mainTab === 'revenue' ? 'revenueTop10Title' : 'trafficTop10Title';
-      const top10BodyId = mainTab === 'revenue' ? 'revenueTop10Body' : 'trafficTop10Body';
-      const labelText = mainTab === 'revenue' ? 'Revenue' : 'Traffic';
-      
-      const overlay = document.getElementById(overlayId);
+    function createTreemap(data){
+      const overlay = document.getElementById('loadingOverlay');
       if(overlay) overlay.style.display='flex';
       setTimeout(()=>{
         const stats=calculateStats(data);
@@ -984,39 +882,36 @@
         const groupBy=document.getElementById('groupByContinent').checked;
 
         // KPIs
-        const statsDiv = document.getElementById(statsDivId);
-        if(statsDiv){
-          statsDiv.innerHTML = `
-            <div class="stat-item"><div class="stat-label">Total ${labelText}</div><div class="stat-value">${(stats.totalSum/1e6).toFixed(2)}M</div></div>
-            <div class="stat-item"><div class="stat-label">Avg Change</div><div class="stat-value ${stats.avgChange>=0?'positive':'negative'}">${stats.avgChange>=0?'+':''}${stats.avgChange.toFixed(2)}%</div></div>
-            <div class="stat-item"><div class="stat-label">Max Increase</div><div class="stat-value positive">+${stats.maxChange.toFixed(2)}% <span style="font-size:14px;opacity:0.8">(${stats.maxChangeCountry})</span></div></div>
-            <div class="stat-item"><div class="stat-label">Max Decrease</div><div class="stat-value negative">${stats.minChange.toFixed(2)}% <span style="font-size:14px;opacity:0.8">(${stats.minChangeCountry})</span></div></div>`;
-        }
+        document.getElementById('stats').innerHTML = `
+          <div class="stat-item"><div class="stat-label">Total Traffic</div><div class="stat-value">${(stats.totalSum/1e6).toFixed(2)}M</div></div>
+          <div class="stat-item"><div class="stat-label">Avg Change</div><div class="stat-value ${stats.avgChange>=0?'positive':'negative'}">${stats.avgChange>=0?'+':''}${stats.avgChange.toFixed(2)}%</div></div>
+          <div class="stat-item"><div class="stat-label">Max Increase</div><div class="stat-value positive">+${stats.maxChange.toFixed(2)}% <span style="font-size:14px;opacity:0.8">(${stats.maxChangeCountry})</span></div></div>
+          <div class="stat-item"><div class="stat-label">Max Decrease</div><div class="stat-value negative">${stats.minChange.toFixed(2)}% <span style="font-size:14px;opacity:0.8">(${stats.minChangeCountry})</span></div></div>`;
         
-        // Top 10 표 제목 업데이트 (마지막 날짜 표시: 연도.월.일 형식)
-        const top10Title = document.getElementById(top10TitleId);
+        // Traffic Top 10 표 제목 업데이트 (마지막 날짜 표시: 연도.월.일 형식)
+        const top10Title = document.getElementById('trafficTop10Title');
         if(top10Title && data.lastDate){
           const lastDateObj = new Date(data.lastDate);
           if(!isNaN(lastDateObj)){
             const year = lastDateObj.getFullYear().toString().slice(-2); // 마지막 2자리
             const month = String(lastDateObj.getMonth() + 1).padStart(2, '0');
             const day = String(lastDateObj.getDate()).padStart(2, '0');
-            top10Title.textContent = `${labelText} Top 10 (${year}.${month}.${day} 기준)`;
+            top10Title.textContent = `Traffic Top 10 (${year}.${month}.${day} 기준)`;
           } else {
             // 날짜 파싱 실패 시 원본 날짜 문자열에서 추출 시도
             const dateMatch = data.lastDate.match(/(\d{1,2})/);
             if(dateMatch){
-              top10Title.textContent = `${labelText} Top 10 (${dateMatch[1]}일 기준)`;
+              top10Title.textContent = `Traffic Top 10 (${dateMatch[1]}일 기준)`;
             } else {
-              top10Title.textContent = `${labelText} Top 10 (DoD 기준)`;
+              top10Title.textContent = 'Traffic Top 10 (DoD 기준)';
             }
           }
         } else if(top10Title){
-          top10Title.textContent = `${labelText} Top 10 (DoD 기준)`;
+          top10Title.textContent = 'Traffic Top 10 (DoD 기준)';
         }
         
-        // Top 10 표 업데이트
-        const top10Body = document.getElementById(top10BodyId);
+        // Traffic Top 10 표 업데이트
+        const top10Body = document.getElementById('trafficTop10Body');
         if(top10Body && stats.trafficTop10){
           top10Body.innerHTML = stats.trafficTop10.map((item, idx) => {
             const changeColor = item.change >= 0 ? '#00ff00' : '#ff4d4d';
@@ -1110,7 +1005,7 @@
           marker:{ colors, line:{width:1, color:'#000000'}, depthfade:false },
           tiling:{ pad: 1 },
           branchvalues:'total', maxdepth: groupBy ? 2 : 1,
-          hovertemplate:`<b>%{label}</b><br>${labelText}: %{value:,.0f}<br>`+
+          hovertemplate:'<b>%{label}</b><br>Traffic: %{value:,.0f}<br>'+
                         'Change: %{customdata[0]:.2f}%<br>Sector: %{customdata[2]}<extra></extra>',
           customdata: custom,
           pathbar:{visible:false}
@@ -1124,148 +1019,46 @@
           hoverlabel:{bgcolor:'#161b22',bordercolor:'#30363d',font:{color:'#fff'}}
         };
 
-        Plotly.newPlot(treemapDivId,[trace],layout,{responsive:true}).then(()=>{ 
+        Plotly.newPlot('treemap',[trace],layout,{responsive:true}).then(()=>{ 
           if(overlay) overlay.style.display='none';
           
           // Treemap 클릭 이벤트: 국가 클릭 시 Country Detail로 이동
-          const treemapDiv = document.getElementById(treemapDivId);
-          if(treemapDiv){
-            treemapDiv.on('plotly_click', (data) => {
-              if(data.points && data.points.length > 0){
-                const point = data.points[0];
-                const label = point.label;
-                
-                // 국가명 추출 (대륙이 아닌 경우만)
-                if(label && currentData && currentData.Country && currentData.Country.includes(label)){
-                  selectCountryFromExternal(label);
-                }
+          const treemapDiv = document.getElementById('treemap');
+          treemapDiv.on('plotly_click', (data) => {
+            if(data.points && data.points.length > 0){
+              const point = data.points[0];
+              const label = point.label;
+              
+              // 국가명 추출 (대륙이 아닌 경우만)
+              if(label && currentData && currentData.Country && currentData.Country.includes(label)){
+                selectCountryFromExternal(label);
               }
-            });
-          }
+            }
+          });
         });
       }, 40);
     }
 
     // ---------- Tab Management ----------
-    // 상위 탭 클릭 핸들러 (Traffic, Revenue, News)
-    document.querySelectorAll('[data-main-tab]').forEach(button => {
+    document.querySelectorAll('.tab-button').forEach(button => {
       button.addEventListener('click', () => {
-        const mainTab = button.getAttribute('data-main-tab');
+        const tabName = button.getAttribute('data-tab');
         
-        // 상위 탭 활성화
-        document.querySelectorAll('[data-main-tab]').forEach(btn => btn.classList.remove('active'));
-        button.classList.add('active');
-        
-        // 하위 탭 컨테이너 표시/숨김
-        const subTabsContainer = document.getElementById('subTabsContainer');
-        if(mainTab === 'news'){
-          subTabsContainer.style.display = 'none';
-        } else {
-          subTabsContainer.style.display = 'block';
-        }
-        
-        // 모든 탭 콘텐츠 숨김
+        // Remove active class from all buttons and contents
+        document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
         
-        // 해당 상위 탭의 첫 번째 하위 탭 활성화
-        if(mainTab === 'news'){
-          document.getElementById('tab-news').classList.add('active');
-          loadNewsForRisersFallers(currentData);
-        } else {
-          // Traffic 또는 Revenue: 첫 번째 하위 탭 활성화
-          const firstSubTab = document.querySelector(`[data-main-tab="${mainTab}"][data-sub-tab="treemap"]`) || 
-                              document.querySelector('[data-sub-tab="treemap"]');
-          if(firstSubTab){
-            firstSubTab.classList.add('active');
-            // 하위 탭 버튼도 활성화
-            document.querySelectorAll('[data-sub-tab]').forEach(btn => btn.classList.remove('active'));
-            const subTabButton = document.querySelector('[data-sub-tab="treemap"]');
-            if(subTabButton) subTabButton.classList.add('active');
-            
-            // Traffic 또는 Revenue 탭으로 돌아올 때 트리맵 다시 렌더링
-            if(mainTab === 'traffic' || mainTab === 'revenue'){
-              // currentData가 없으면 샘플 데이터 생성
-              if(!currentData){
-                const sampleData = generateSampleData();
-                currentData = sampleData;
-              }
-              
-              // 탭 콘텐츠가 활성화된 후 렌더링
-              setTimeout(() => {
-                const treemapDivId = mainTab === 'revenue' ? 'treemap-revenue' : 'treemap';
-                
-                // Revenue 탭은 항상 새로 렌더링
-                if(mainTab === 'revenue'){
-                  createTreemap(currentData, mainTab);
-                } else {
-                  // Traffic 탭은 이미 렌더링되어 있으면 리사이즈만
-                  const treemapDiv = document.getElementById(treemapDivId);
-                  if(treemapDiv && treemapDiv.offsetParent !== null){
-                    if(treemapDiv.data && treemapDiv.data.length > 0){
-                      Plotly.Plots.resize(treemapDivId);
-                    } else {
-                      createTreemap(currentData, mainTab);
-                    }
-                  } else {
-                    createTreemap(currentData, mainTab);
-                  }
-                }
-              }, 200);
-            }
-          }
-        }
-      });
-    });
-    
-    // 하위 탭 클릭 핸들러 (Treemap, Risers/Fallers, Country Detail)
-    document.querySelectorAll('[data-sub-tab]').forEach(button => {
-      button.addEventListener('click', () => {
-        const subTab = button.getAttribute('data-sub-tab');
-        const mainTab = document.querySelector('[data-main-tab].active')?.getAttribute('data-main-tab') || 'traffic';
-        
-        // 하위 탭 버튼 활성화
-        document.querySelectorAll('[data-sub-tab]').forEach(btn => btn.classList.remove('active'));
+        // Add active class to clicked button and corresponding content
         button.classList.add('active');
+        document.getElementById(`tab-${tabName}`).classList.add('active');
         
-        // 해당 하위 탭 콘텐츠 활성화
-        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-        const targetContent = document.querySelector(`[data-main-tab="${mainTab}"][data-sub-tab="${subTab}"]`) ||
-                             document.querySelector(`[data-sub-tab="${subTab}"]`);
-        if(targetContent) targetContent.classList.add('active');
-        
-        // 콘텐츠 업데이트
-        if(subTab === 'treemap'){
-          // 트리맵 탭이 활성화될 때 Plotly 리사이즈 또는 렌더링
-          setTimeout(() => {
-            // currentData가 없으면 샘플 데이터 생성
-            if(!currentData){
-              const sampleData = generateSampleData();
-              currentData = sampleData;
-            }
-            
-            const treemapDivId = mainTab === 'revenue' ? 'treemap-revenue' : 'treemap';
-            
-            // Revenue 탭은 항상 새로 렌더링
-            if(mainTab === 'revenue'){
-              createTreemap(currentData, mainTab);
-            } else {
-              // Traffic 탭은 이미 렌더링되어 있으면 리사이즈만
-              const treemapDiv = document.getElementById(treemapDivId);
-              if(treemapDiv && treemapDiv.offsetParent !== null){
-                if(treemapDiv.data && treemapDiv.data.length > 0){
-                  Plotly.Plots.resize(treemapDivId);
-                } else if(currentData){
-                  createTreemap(currentData, mainTab);
-                }
-              } else if(currentData){
-                createTreemap(currentData, mainTab);
-              }
-            }
-          }, 150);
-        } else if(subTab === 'risers-fallers'){
+        // Update content based on tab
+        if(tabName === 'risers-fallers'){
           updateRisersFallers(currentData);
-        } else if(subTab === 'country-detail'){
+        } else if(tabName === 'country-detail'){
           updateCountrySelect(currentData);
+        } else if(tabName === 'news'){
+          loadNewsFromCSV();
         }
       });
     });
@@ -1417,7 +1210,7 @@
         btn.addEventListener('click', () => {
           const country = btn.getAttribute('data-country');
           // Country Detail 탭으로 이동
-          document.querySelector('[data-sub-tab="country-detail"]').click();
+          document.querySelector('[data-tab="country-detail"]').click();
           setTimeout(() => {
             showCountryDetail(data, country);
             // 검색 입력창에도 표시
@@ -1512,19 +1305,15 @@
     function selectCountryFromExternal(country){
       if(!country || !currentData) return;
       
-      // Traffic 탭으로 이동하고 Country Detail 하위 탭 활성화
-      const trafficTab = document.querySelector('[data-main-tab="traffic"]');
-      if(trafficTab) trafficTab.click();
-      setTimeout(() => {
-        const subTabButton = document.querySelector('[data-sub-tab="country-detail"]');
-        if(subTabButton){
-          subTabButton.click();
-          setTimeout(() => {
-            showCountryDetail(currentData, country);
-            document.getElementById('countrySearch').value = country;
-          }, 50);
-        }
-      }, 50);
+      // Country Detail 탭으로 이동
+      const tabButton = document.querySelector('[data-tab="country-detail"]');
+      if(tabButton){
+        tabButton.click();
+        setTimeout(() => {
+          showCountryDetail(currentData, country);
+          document.getElementById('countrySearch').value = country;
+        }, 100);
+      }
     }
 
     function showCountryDetail(data, country){
@@ -2304,8 +2093,7 @@
     window.addEventListener('load',()=>{
       const t=overlay?.querySelector('.loading-text'); if(t) t.textContent='샘플 데이터로 초기화 중...';
       setTimeout(()=> {
-        const activeMainTab = document.querySelector('[data-main-tab].active')?.getAttribute('data-main-tab') || 'traffic';
-        createTreemap(currentData, activeMainTab);
+        createTreemap(currentData);
         updateCountrySelect(currentData);
       }, 120);
     });
