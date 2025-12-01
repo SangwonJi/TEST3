@@ -294,52 +294,76 @@
             <button id="btnRefreshNews" style="padding:8px 16px;background:linear-gradient(135deg,#238636,#2ea043);border:none;border-radius:6px;color:#fff;font-weight:600;cursor:pointer;font-size:13px">🔄 새로고침</button>
           </div>
           
-          <!-- 뉴스 타입 필터 (주요 탭) -->
-          <div style="margin-bottom:16px;display:flex;gap:0;border-radius:8px;overflow:hidden;border:1px solid var(--border)">
-            <button class="news-type-filter active" data-type="all" style="flex:1;padding:12px 16px;background:linear-gradient(135deg,#238636,#2ea043);border:none;color:#fff;font-size:13px;cursor:pointer;font-weight:600;transition:all 0.2s">
-              📰 전체
-            </button>
-            <button class="news-type-filter" data-type="traffic_impact" style="flex:1;padding:12px 16px;background:var(--panel);border:none;border-left:1px solid var(--border);color:var(--muted);font-size:13px;cursor:pointer;font-weight:600;transition:all 0.2s">
-              ⚡ 트래픽 영향
-            </button>
-            <button class="news-type-filter" data-type="gaming" style="flex:1;padding:12px 16px;background:var(--panel);border:none;border-left:1px solid var(--border);color:var(--muted);font-size:13px;cursor:pointer;font-weight:600;transition:all 0.2s">
-              🎮 게임 뉴스
-            </button>
-          </div>
-          
-          <div style="margin-bottom:16px;padding:12px;background:rgba(35,134,54,0.1);border:1px solid rgba(35,134,54,0.3);border-radius:6px;font-size:13px;color:var(--muted)">
-            <strong style="color:#238636">💡 참고:</strong> 
-            <span id="newsMethodInfo">⚡ 트래픽 영향 뉴스는 AI 분석으로 정제된 뉴스입니다. 🎮 게임 뉴스는 PUBG Mobile 및 모바일 게임 관련 소식입니다.</span>
-          </div>
-          
-          <!-- 카테고리 필터 (세부 필터) -->
-          <div style="margin-bottom:16px" id="categoryFilterSection">
-            <strong style="color:var(--muted);font-size:12px;display:block;margin-bottom:8px">세부 카테고리:</strong>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-              <button class="category-filter active" data-category="all" data-group="all" style="padding:6px 12px;background:linear-gradient(135deg,#238636,#2ea043);border:none;border-radius:6px;color:#fff;font-size:12px;cursor:pointer;font-weight:600">전체</button>
-              
-              <!-- 🔴 장애 및 차단 -->
-              <button class="category-filter" data-category="outage_block" data-group="outage_block" style="padding:6px 12px;background:var(--panel);border:2px solid #ff4757;border-radius:6px;color:#ff4757;font-size:12px;cursor:pointer;font-weight:600">🔴 장애/차단</button>
-              
-              <!-- 🟠 사회적 위기 -->
-              <button class="category-filter" data-category="social_crisis" data-group="social_crisis" style="padding:6px 12px;background:var(--panel);border:2px solid #ffa502;border-radius:6px;color:#ffa502;font-size:12px;cursor:pointer;font-weight:600">🟠 사회 위기</button>
-              
-              <!-- 🟢 시즌 및 일정 -->
-              <button class="category-filter" data-category="seasonal_calendar" data-group="seasonal_calendar" style="padding:6px 12px;background:var(--panel);border:2px solid #2ed573;border-radius:6px;color:#2ed573;font-size:12px;cursor:pointer;font-weight:600">🟢 시즌/일정</button>
-              
-              <!-- 🔵 게임 및 경쟁 -->
-              <button class="category-filter" data-category="gaming_competitor" data-group="gaming_competitor" style="padding:6px 12px;background:var(--panel);border:2px solid #5352ed;border-radius:6px;color:#5352ed;font-size:12px;cursor:pointer;font-weight:600">🔵 게임/경쟁</button>
-              
-              <!-- ⚪ 기타 -->
-              <button class="category-filter" data-category="other" data-group="other" style="padding:6px 12px;background:var(--panel);border:2px solid #95a5a6;border-radius:6px;color:#95a5a6;font-size:12px;cursor:pointer;font-weight:600">⚪ 기타</button>
+          <!-- 🔥 트래픽 영향 요약 섹션 (AI 분석) -->
+          <div id="trafficSummarySection" style="margin-bottom:24px;padding:20px;background:linear-gradient(135deg, rgba(255,107,107,0.1), rgba(83,82,237,0.1));border:1px solid rgba(255,107,107,0.3);border-radius:12px">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+              <div style="width:40px;height:40px;background:linear-gradient(135deg,#ff6b6b,#ee5a24);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px">📊</div>
+              <div>
+                <div style="font-size:16px;font-weight:700;color:#fff">트래픽 영향 분석</div>
+                <div style="font-size:12px;color:var(--muted)">모바일 게임 트래픽 전문가 관점</div>
+              </div>
+            </div>
+            <div id="trafficSummaryContent" style="font-size:14px;line-height:1.8;color:#e0e0e0">
+              <div style="display:flex;align-items:center;gap:8px;color:var(--muted)">
+                <div class="loading-spinner" style="width:16px;height:16px;border-width:2px"></div>
+                분석 중...
+              </div>
+            </div>
+            <div id="trafficSummaryMeta" style="margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.1);display:none">
+              <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted)">
+                <span>🕐 분석 시간: <span id="summaryTime">-</span></span>
+                <span>📰 분석 뉴스: <span id="summaryNewsCount">0</span>개</span>
+              </div>
             </div>
           </div>
           
-          <!-- 뉴스 통계 -->
-          <div id="newsStats" style="margin-bottom:16px;display:flex;gap:16px;font-size:13px;color:var(--muted)">
-            <span>📊 총 <strong id="totalNewsCount" style="color:#fff">0</strong>개</span>
-            <span>⚡ 트래픽 <strong id="trafficNewsCount" style="color:#ff6b6b">0</strong>개</span>
-            <span>🎮 게임 <strong id="gamingNewsCount" style="color:#5352ed">0</strong>개</span>
+          <!-- 뉴스 필터 카드 -->
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
+            <button class="news-type-filter active" data-type="all" style="padding:16px;background:linear-gradient(135deg,#238636,#2ea043);border:none;border-radius:12px;color:#fff;cursor:pointer;transition:all 0.2s;text-align:left">
+              <div style="font-size:24px;margin-bottom:8px">📰</div>
+              <div style="font-size:14px;font-weight:700">전체 뉴스</div>
+              <div style="font-size:12px;opacity:0.8;margin-top:4px"><span id="totalNewsCount">0</span>개</div>
+            </button>
+            <button class="news-type-filter" data-type="traffic_impact" style="padding:16px;background:var(--panel);border:2px solid #ff6b6b;border-radius:12px;color:#ff6b6b;cursor:pointer;transition:all 0.2s;text-align:left">
+              <div style="font-size:24px;margin-bottom:8px">⚡</div>
+              <div style="font-size:14px;font-weight:700">트래픽 영향</div>
+              <div style="font-size:12px;opacity:0.8;margin-top:4px"><span id="trafficNewsCount">0</span>개</div>
+            </button>
+            <button class="news-type-filter" data-type="gaming" style="padding:16px;background:var(--panel);border:2px solid #5352ed;border-radius:12px;color:#5352ed;cursor:pointer;transition:all 0.2s;text-align:left">
+              <div style="font-size:24px;margin-bottom:8px">🎮</div>
+              <div style="font-size:14px;font-weight:700">게임 뉴스</div>
+              <div style="font-size:12px;opacity:0.8;margin-top:4px"><span id="gamingNewsCount">0</span>개</div>
+            </button>
+          </div>
+          
+          <!-- 세부 카테고리 필터 (접이식) -->
+          <div style="margin-bottom:20px">
+            <button id="toggleCategoryFilter" style="width:100%;padding:12px 16px;background:var(--panel);border:1px solid var(--border);border-radius:8px;color:var(--muted);cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:13px">
+              <span>🏷️ 세부 카테고리 필터</span>
+              <span id="categoryToggleIcon">▼</span>
+            </button>
+            <div id="categoryFilterSection" style="margin-top:12px;padding:16px;background:var(--panel);border:1px solid var(--border);border-radius:8px;display:none">
+              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px">
+                <button class="category-filter active" data-category="all" style="padding:10px 12px;background:linear-gradient(135deg,#238636,#2ea043);border:none;border-radius:8px;color:#fff;font-size:12px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:6px">
+                  <span>✓</span> 전체 보기
+                </button>
+                <button class="category-filter" data-category="outage_block" style="padding:10px 12px;background:rgba(255,71,87,0.1);border:2px solid #ff4757;border-radius:8px;color:#ff4757;font-size:12px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:6px">
+                  <span>🔴</span> 장애/차단
+                </button>
+                <button class="category-filter" data-category="social_crisis" style="padding:10px 12px;background:rgba(255,165,2,0.1);border:2px solid #ffa502;border-radius:8px;color:#ffa502;font-size:12px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:6px">
+                  <span>🟠</span> 사회 위기
+                </button>
+                <button class="category-filter" data-category="seasonal_calendar" style="padding:10px 12px;background:rgba(46,213,115,0.1);border:2px solid #2ed573;border-radius:8px;color:#2ed573;font-size:12px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:6px">
+                  <span>🟢</span> 시즌/일정
+                </button>
+                <button class="category-filter" data-category="gaming_competitor" style="padding:10px 12px;background:rgba(83,82,237,0.1);border:2px solid #5352ed;border-radius:8px;color:#5352ed;font-size:12px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:6px">
+                  <span>🔵</span> 게임/경쟁
+                </button>
+                <button class="category-filter" data-category="other" style="padding:10px 12px;background:rgba(149,165,166,0.1);border:2px solid #95a5a6;border-radius:8px;color:#95a5a6;font-size:12px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:6px">
+                  <span>⚪</span> 기타
+                </button>
+              </div>
+            </div>
           </div>
           
           <div id="newsList">
@@ -1636,8 +1660,10 @@
             document.getElementById('trafficNewsCount').textContent = trafficCount;
             document.getElementById('gamingNewsCount').textContent = gamingCount;
             
-            document.getElementById('newsMethodInfo').textContent = `⚡ 트래픽 영향 ${trafficCount}개 / 🎮 게임 뉴스 ${gamingCount}개를 불러왔습니다.`;
             applyNewsFilters();
+            
+            // 트래픽 영향 요약 생성
+            generateTrafficSummary(allNewsData);
           },
           error: (error) => {
             console.error('CSV 파싱 오류:', error);
@@ -1696,24 +1722,153 @@
       renderNews(filteredNews);
     }
     
-    // 뉴스 타입 필터링
+    // 뉴스 타입 필터링 (새 카드 UI)
     function filterNewsByType(type){
       currentNewsTypeFilter = type;
       
-      // 뉴스 타입 버튼 활성화 상태 업데이트
+      // 뉴스 타입 카드 버튼 활성화 상태 업데이트
       document.querySelectorAll('.news-type-filter').forEach(btn => {
-        if(btn.dataset.type === type){
+        const btnType = btn.dataset.type;
+        if(btnType === type){
           btn.classList.add('active');
-          btn.style.background = 'linear-gradient(135deg,#238636,#2ea043)';
-          btn.style.color = '#fff';
+          if(btnType === 'all'){
+            btn.style.background = 'linear-gradient(135deg,#238636,#2ea043)';
+            btn.style.color = '#fff';
+            btn.style.border = 'none';
+          } else if(btnType === 'traffic_impact'){
+            btn.style.background = 'linear-gradient(135deg,#ff6b6b,#ee5a24)';
+            btn.style.color = '#fff';
+            btn.style.border = '2px solid #ff6b6b';
+          } else if(btnType === 'gaming'){
+            btn.style.background = 'linear-gradient(135deg,#5352ed,#3742fa)';
+            btn.style.color = '#fff';
+            btn.style.border = '2px solid #5352ed';
+          }
         } else {
           btn.classList.remove('active');
           btn.style.background = 'var(--panel)';
-          btn.style.color = 'var(--muted)';
+          if(btnType === 'all'){
+            btn.style.color = 'var(--muted)';
+            btn.style.border = '1px solid var(--border)';
+          } else if(btnType === 'traffic_impact'){
+            btn.style.color = '#ff6b6b';
+            btn.style.border = '2px solid #ff6b6b';
+          } else if(btnType === 'gaming'){
+            btn.style.color = '#5352ed';
+            btn.style.border = '2px solid #5352ed';
+          }
         }
       });
       
       applyNewsFilters();
+    }
+    
+    // 카테고리 필터 토글
+    document.getElementById('toggleCategoryFilter')?.addEventListener('click', function(){
+      const section = document.getElementById('categoryFilterSection');
+      const icon = document.getElementById('categoryToggleIcon');
+      if(section.style.display === 'none'){
+        section.style.display = 'block';
+        icon.textContent = '▲';
+      } else {
+        section.style.display = 'none';
+        icon.textContent = '▼';
+      }
+    });
+    
+    // 트래픽 영향 요약 생성
+    function generateTrafficSummary(newsData){
+      const trafficNews = newsData.filter(n => n.news_type === 'traffic_impact');
+      
+      if(trafficNews.length === 0){
+        document.getElementById('trafficSummaryContent').innerHTML = `
+          <div style="color:var(--muted)">현재 수집된 트래픽 영향 뉴스가 없습니다.</div>
+        `;
+        return;
+      }
+      
+      // 카테고리별 분류
+      const categories = {};
+      trafficNews.forEach(news => {
+        const cat = news.category_group || news.category || 'other';
+        if(!categories[cat]) categories[cat] = [];
+        categories[cat].push(news);
+      });
+      
+      // 국가별 분류
+      const countries = {};
+      trafficNews.forEach(news => {
+        const country = news.country || 'Unknown';
+        if(!countries[country]) countries[country] = [];
+        countries[country].push(news);
+      });
+      
+      // 요약 HTML 생성
+      let summaryHTML = '';
+      
+      // 주요 이슈 요약
+      summaryHTML += `<div style="margin-bottom:16px">`;
+      summaryHTML += `<div style="font-weight:700;color:#ff6b6b;margin-bottom:8px">🚨 주요 이슈 (최근 7일)</div>`;
+      summaryHTML += `<ul style="margin:0;padding-left:20px;list-style:none">`;
+      
+      // 카테고리별 요약
+      const categoryNames = {
+        'outage_block': '🔴 장애/차단',
+        'social_crisis': '🟠 사회적 위기',
+        'seasonal_calendar': '🟢 시즌/일정',
+        'gaming_competitor': '🔵 게임/경쟁',
+        'other': '⚪ 기타'
+      };
+      
+      Object.keys(categories).forEach(cat => {
+        const count = categories[cat].length;
+        const catName = categoryNames[cat] || cat;
+        summaryHTML += `<li style="margin-bottom:4px">• ${catName}: <strong>${count}</strong>건</li>`;
+      });
+      summaryHTML += `</ul></div>`;
+      
+      // 트래픽 영향 분석 (전문가 관점)
+      summaryHTML += `<div style="margin-bottom:16px">`;
+      summaryHTML += `<div style="font-weight:700;color:#5352ed;margin-bottom:8px">📈 트래픽 영향 분석</div>`;
+      summaryHTML += `<div style="padding:12px;background:rgba(0,0,0,0.2);border-radius:8px;font-size:13px">`;
+      
+      // 위기 상황 체크
+      const crisisCount = (categories['outage_block'] || []).length + (categories['social_crisis'] || []).length;
+      const seasonCount = (categories['seasonal_calendar'] || []).length;
+      
+      if(crisisCount > 0){
+        summaryHTML += `<div style="margin-bottom:8px">⚠️ <strong style="color:#ff6b6b">주의:</strong> ${crisisCount}건의 위기/장애 관련 뉴스가 감지되었습니다. 해당 지역 트래픽 하락 가능성이 있습니다.</div>`;
+      }
+      
+      if(seasonCount > 0){
+        summaryHTML += `<div style="margin-bottom:8px">📅 <strong style="color:#2ed573">시즌 이벤트:</strong> ${seasonCount}건의 시즌/일정 관련 뉴스가 있습니다. 트래픽 상승 기회가 될 수 있습니다.</div>`;
+      }
+      
+      // 국가별 영향
+      const topCountries = Object.keys(countries).sort((a,b) => countries[b].length - countries[a].length).slice(0, 5);
+      if(topCountries.length > 0){
+        summaryHTML += `<div>🌍 <strong>주요 영향 국가:</strong> ${topCountries.join(', ')}</div>`;
+      }
+      
+      summaryHTML += `</div></div>`;
+      
+      // 최신 주요 뉴스 3개
+      summaryHTML += `<div>`;
+      summaryHTML += `<div style="font-weight:700;color:#ffa502;margin-bottom:8px">📌 최신 주요 뉴스</div>`;
+      const recentNews = trafficNews.sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 3);
+      recentNews.forEach(news => {
+        const catIcon = categoryNames[news.category_group]?.split(' ')[0] || '📰';
+        summaryHTML += `<div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:13px">`;
+        summaryHTML += `<span style="margin-right:8px">${catIcon}</span>`;
+        summaryHTML += `<span>${news.title?.substring(0, 60)}${news.title?.length > 60 ? '...' : ''}</span>`;
+        summaryHTML += `</div>`;
+      });
+      summaryHTML += `</div>`;
+      
+      document.getElementById('trafficSummaryContent').innerHTML = summaryHTML;
+      document.getElementById('trafficSummaryMeta').style.display = 'block';
+      document.getElementById('summaryTime').textContent = new Date().toLocaleString('ko-KR');
+      document.getElementById('summaryNewsCount').textContent = trafficNews.length;
     }
     
     // 카테고리별 필터링 (그룹 카테고리 기준)
