@@ -34,14 +34,21 @@ IMPACT_KEYWORDS = {
 }
 
 # 제외할 키워드 (트래픽과 무관)
+# ※ protest/시위는 트래픽 영향 있으므로 제외하지 않음!
 EXCLUDE_KEYWORDS = [
-    # 연예/시상식
+    # 연예/시상식/OTT
     'MAMA', 'Awards', '시상식', '콘서트', 'concert', '앨범', 'album',
-    'K-pop', 'idol', '아이돌', '걸그룹', '보이그룹', 'mourning', 'tragedy',
-    # 일반 시위 (인터넷 차단 없으면 무관)
-    'protest', 'PROTEST', '시위', 'immigration', 'hindu',
-    # 스포츠
-    'FIFA', 'World Cup', '월드컵', 'Olympics'
+    'K-pop', 'idol', '아이돌', '걸그룹', '보이그룹', 'mourning',
+    '드라마', '예능', '시청률', '넷플릭스', 'Netflix', '열애설', '결별설',
+    # 시위 - 구체적 케이스만 제외
+    'immigration protest', 'hindu protest', 'farmer protest',
+    # 광고/마케팅
+    '광고', '협찬', '마케팅', '캠페인', 'campaign', '프로모션',
+    'sponsored', 'sponsorship',
+    # 금융/증시
+    '증시', '코스피', '주가', 'stock price', 'earnings', 'IPO',
+    # 스포츠 (월드컵/올림픽은 트래픽 영향 있으므로 제외하지 않음!)
+    '프로야구', '프로축구', 'NBA', 'MLB',
 ]
 
 # 카테고리 그룹 정보

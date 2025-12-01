@@ -8,35 +8,69 @@ import re
 NEWS_CSV = 'data/news.csv'
 
 # 제외할 키워드 패턴
+# ※ 주의: protest/시위는 TRAFFIC_REQUIRED에 있으므로 여기서 제외하면 안됨!
 EXCLUDE_KEYWORDS = [
-    # 군사/방산
+    # 군사/방산 (일반 군사 뉴스는 트래픽과 무관)
     '자주포', '전차', '미사일', '무기', '군수', '방산', '국방',
     'K9', 'K2', '한화에어로', '한화디펜스', 'defense contract',
     '방위사업', 'military contract', 'arms deal',
     'DMZ', 'Korean War soldiers', '유해 발굴', '전사자',
-    # 연예/시상식 (트래픽 무관)
-    'MAMA', 'Awards', '시상식', 'mourning', 'tragedy', 'Hong Kong tragedy',
-    'K-pop', 'idol', '아이돌',
-    # 일반 시위 (인터넷 차단 없으면 무관)
-    'PROTEST', 'protest', 'immigration protest', 'hindu protest',
-    # 야구/스포츠 (WAR는 야구 통계 용어)
-    '구원투수', '스토브리그', 'WAR 전체', '지명', 'KT', 'xportsnews',
+    
+    # 연예/시상식
+    'MAMA', 'Awards', '시상식', 'mourning', 'Hong Kong tragedy',
+    'K-pop', 'idol', '아이돌', '걸그룹', '보이그룹',
+    '콘서트', '앨범', '팬미팅', '뮤직비디오',
+    'concert', 'album', 'fan meeting',
+    
+    # 연예/OTT (강화)
+    '드라마', '예능', '시청률', '리얼리티 쇼',
+    'OTT', '넷플릭스', '디즈니+', '티빙', '웨이브', '쿠팡플레이',
+    'Netflix', 'Disney+', 'OST',
+    '열애설', '결별설', '연예계', '연예인 커플',
+    
+    # 시위 - 구체적 케이스만 제외 (일반 protest는 트래픽 영향 있으므로 제외하지 않음!)
+    'immigration protest', 'hindu protest', 'farmer protest',
+    
+    # 야구/스포츠 (WAR는 야구 통계 용어, e스포츠 제외)
+    '구원투수', '스토브리그', 'WAR 전체', '지명', 'xportsnews',
+    '프로축구', '프로야구', 'NBA', 'MLB',
+    # ※ FIFA/월드컵/올림픽은 트래픽 영향 있으므로 제외하지 않음!
+    
     # 반도체/경제 (Chip War는 반도체 경쟁)
-    'Chip War', 'SK하이닉스', '반도체', 'AI 거품론',
-    # 광고/마케팅
-    '캠페인', 'campaign', '프로모션', 'promotion', '팝업', 'popup',
-    '콜라보', 'collaboration', '신제품',
-    # 연예/엔터
-    '걸그룹', '보이그룹', '아이돌', '콘서트', '앨범', '팬미팅',
-    '뮤직비디오', 'idol', 'concert', 'album',
+    'Chip War', 'SK하이닉스', 'AI 거품론',
+    
+    # 광고/마케팅 (강화)
+    '광고', '협찬', '마케팅', '보도자료',
+    '캠페인', 'campaign', '프로모션', 'promotion',
+    '팝업', 'popup', '콜라보', 'collaboration', '신제품',
+    'sponsored', 'sponsorship', 'affiliate',
+    '브랜드 캠페인', '브랜드 콜라보',
+    
+    # 금융/증시/투자 (추가)
+    '증시', '코스피', '코스닥', '주가', '지수',
+    '증권사', '증권가', '펀드', '리츠', '재테크',
+    'stock price', 'earnings', 'quarterly earnings',
+    'investor', 'dividend', 'IPO', '공모주',
+    
+    # 채용/커리어 (강화)
+    '채용', '공채', '수시채용', '신입사원', '경력직',
+    'job opening', 'hiring', 'recruitment', 'career fair',
+    '인턴 모집', '공모전',
+    
     # 음식/브랜드
     '던킨', '스타벅스', '맥도날드', '버거킹', '엠앤엠', 'M&M',
+    '초콜릿', '커피', 'coffee', '음료',
+    
     # 패션/뷰티
-    '패션', '뷰티', '화장품', '의류',
-    # 정치/외교
+    '패션', 'fashion', '뷰티', 'beauty', '화장품', 'cosmetic',
+    '의류', 'clothing', '쇼핑', 'shopping',
+    
+    # 정치/외교 (일반 정치는 트래픽과 무관)
     '대통령', '국회', '외교부', '장관', '정상회담',
-    # 스포츠 (e스포츠 제외)
-    '프로축구', '프로야구', 'FIFA', 'NBA', 'MLB',
+    
+    # 기타
+    '부동산', 'real estate', '날씨', 'weather forecast',
+    '맛집', 'restaurant', '여행', 'travel tip',
 ]
 
 # 반드시 포함해야 하는 게임 키워드 (게임 뉴스용)

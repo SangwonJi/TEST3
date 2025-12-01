@@ -1778,8 +1778,11 @@
     // 트래픽 영향 요약 생성
     function generateTrafficSummary(newsData){
       // 제외 키워드 (트래픽과 무관)
-      const excludeKeywords = ['MAMA', 'Awards', '시상식', 'mourning', 'tragedy', 'concert', 
-                               'PROTEST', 'protest', '시위', 'immigration', 'idol', '아이돌'];
+      // ※ protest/시위는 트래픽 영향 있으므로 제외하지 않음!
+      const excludeKeywords = ['MAMA', 'Awards', '시상식', 'mourning', 'concert', 
+                               '드라마', '예능', '넷플릭스', '열애설', '결별설',
+                               'immigration protest', 'hindu protest', 'farmer protest',
+                               '광고', '협찬', '캠페인', '증시', '코스피', 'idol', '아이돌'];
       
       // 트래픽 뉴스 필터링 + 중복 제거
       const seenTitles = new Set();
