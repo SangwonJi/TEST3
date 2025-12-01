@@ -293,32 +293,55 @@
             <div class="section-title" style="margin:0">📰 News & Headlines</div>
             <button id="btnRefreshNews" style="padding:8px 16px;background:linear-gradient(135deg,#238636,#2ea043);border:none;border-radius:6px;color:#fff;font-weight:600;cursor:pointer;font-size:13px">🔄 새로고침</button>
           </div>
+          
+          <!-- 뉴스 타입 필터 (주요 탭) -->
+          <div style="margin-bottom:16px;display:flex;gap:0;border-radius:8px;overflow:hidden;border:1px solid var(--border)">
+            <button class="news-type-filter active" data-type="all" style="flex:1;padding:12px 16px;background:linear-gradient(135deg,#238636,#2ea043);border:none;color:#fff;font-size:13px;cursor:pointer;font-weight:600;transition:all 0.2s">
+              📰 전체
+            </button>
+            <button class="news-type-filter" data-type="traffic_impact" style="flex:1;padding:12px 16px;background:var(--panel);border:none;border-left:1px solid var(--border);color:var(--muted);font-size:13px;cursor:pointer;font-weight:600;transition:all 0.2s">
+              ⚡ 트래픽 영향
+            </button>
+            <button class="news-type-filter" data-type="gaming" style="flex:1;padding:12px 16px;background:var(--panel);border:none;border-left:1px solid var(--border);color:var(--muted);font-size:13px;cursor:pointer;font-weight:600;transition:all 0.2s">
+              🎮 게임 뉴스
+            </button>
+          </div>
+          
           <div style="margin-bottom:16px;padding:12px;background:rgba(35,134,54,0.1);border:1px solid rgba(35,134,54,0.3);border-radius:6px;font-size:13px;color:var(--muted)">
             <strong style="color:#238636">💡 참고:</strong> 
-            <span id="newsMethodInfo">모바일 게임 트래픽에 영향을 줄 수 있는 뉴스를 카테고리별로 확인할 수 있습니다.</span>
+            <span id="newsMethodInfo">⚡ 트래픽 영향 뉴스는 AI 분석으로 정제된 뉴스입니다. 🎮 게임 뉴스는 PUBG Mobile 및 모바일 게임 관련 소식입니다.</span>
           </div>
-          <!-- 카테고리 필터 (그룹별) -->
-          <div style="margin-bottom:16px">
-            <strong style="color:var(--text);font-size:13px;display:block;margin-bottom:8px">카테고리:</strong>
+          
+          <!-- 카테고리 필터 (세부 필터) -->
+          <div style="margin-bottom:16px" id="categoryFilterSection">
+            <strong style="color:var(--muted);font-size:12px;display:block;margin-bottom:8px">세부 카테고리:</strong>
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
               <button class="category-filter active" data-category="all" data-group="all" style="padding:6px 12px;background:linear-gradient(135deg,#238636,#2ea043);border:none;border-radius:6px;color:#fff;font-size:12px;cursor:pointer;font-weight:600">전체</button>
               
               <!-- 🔴 장애 및 차단 -->
-              <button class="category-filter" data-category="outage_block" data-group="outage_block" style="padding:6px 12px;background:var(--panel);border:2px solid #ff4757;border-radius:6px;color:#ff4757;font-size:12px;cursor:pointer;font-weight:600">🔴 장애 및 차단</button>
+              <button class="category-filter" data-category="outage_block" data-group="outage_block" style="padding:6px 12px;background:var(--panel);border:2px solid #ff4757;border-radius:6px;color:#ff4757;font-size:12px;cursor:pointer;font-weight:600">🔴 장애/차단</button>
               
               <!-- 🟠 사회적 위기 -->
-              <button class="category-filter" data-category="social_crisis" data-group="social_crisis" style="padding:6px 12px;background:var(--panel);border:2px solid #ffa502;border-radius:6px;color:#ffa502;font-size:12px;cursor:pointer;font-weight:600">🟠 사회적 위기</button>
+              <button class="category-filter" data-category="social_crisis" data-group="social_crisis" style="padding:6px 12px;background:var(--panel);border:2px solid #ffa502;border-radius:6px;color:#ffa502;font-size:12px;cursor:pointer;font-weight:600">🟠 사회 위기</button>
               
               <!-- 🟢 시즌 및 일정 -->
-              <button class="category-filter" data-category="seasonal_calendar" data-group="seasonal_calendar" style="padding:6px 12px;background:var(--panel);border:2px solid #2ed573;border-radius:6px;color:#2ed573;font-size:12px;cursor:pointer;font-weight:600">🟢 시즌 및 일정</button>
+              <button class="category-filter" data-category="seasonal_calendar" data-group="seasonal_calendar" style="padding:6px 12px;background:var(--panel);border:2px solid #2ed573;border-radius:6px;color:#2ed573;font-size:12px;cursor:pointer;font-weight:600">🟢 시즌/일정</button>
               
               <!-- 🔵 게임 및 경쟁 -->
-              <button class="category-filter" data-category="gaming_competitor" data-group="gaming_competitor" style="padding:6px 12px;background:var(--panel);border:2px solid #5352ed;border-radius:6px;color:#5352ed;font-size:12px;cursor:pointer;font-weight:600">🔵 게임 및 경쟁</button>
+              <button class="category-filter" data-category="gaming_competitor" data-group="gaming_competitor" style="padding:6px 12px;background:var(--panel);border:2px solid #5352ed;border-radius:6px;color:#5352ed;font-size:12px;cursor:pointer;font-weight:600">🔵 게임/경쟁</button>
               
               <!-- ⚪ 기타 -->
               <button class="category-filter" data-category="other" data-group="other" style="padding:6px 12px;background:var(--panel);border:2px solid #95a5a6;border-radius:6px;color:#95a5a6;font-size:12px;cursor:pointer;font-weight:600">⚪ 기타</button>
             </div>
           </div>
+          
+          <!-- 뉴스 통계 -->
+          <div id="newsStats" style="margin-bottom:16px;display:flex;gap:16px;font-size:13px;color:var(--muted)">
+            <span>📊 총 <strong id="totalNewsCount" style="color:#fff">0</strong>개</span>
+            <span>⚡ 트래픽 <strong id="trafficNewsCount" style="color:#ff6b6b">0</strong>개</span>
+            <span>🎮 게임 <strong id="gamingNewsCount" style="color:#5352ed">0</strong>개</span>
+          </div>
+          
           <div id="newsList">
             <div class="empty-state">
               <div class="empty-state-icon">📰</div>
@@ -1470,6 +1493,7 @@
     // ---------- News & Headlines Tab ----------
     let allNewsData = []; // 전체 뉴스 데이터 저장
     let currentCategoryFilter = 'all'; // 현재 선택된 카테고리
+    let currentNewsTypeFilter = 'all'; // 현재 선택된 뉴스 타입 (all, traffic_impact, gaming)
     
     // 그룹별 색상 정의
     const groupColors = {
@@ -1478,6 +1502,12 @@
       'seasonal_calendar': '#2ed573',
       'gaming_competitor': '#5352ed',
       'other': '#95a5a6'
+    };
+    
+    // 뉴스 타입별 스타일 정의
+    const newsTypeStyles = {
+      'traffic_impact': { icon: '⚡', label: '트래픽 영향', color: '#ff6b6b', bgColor: 'rgba(255,107,107,0.15)' },
+      'gaming': { icon: '🎮', label: '게임 뉴스', color: '#5352ed', bgColor: 'rgba(83,82,237,0.15)' }
     };
     
     // category_group 매핑 함수 (한 번만 정의, 재사용)
@@ -1492,6 +1522,23 @@
       if (seasonalCalendar.includes(detailCategory)) return 'seasonal_calendar';
       if (gamingCompetitor.includes(detailCategory)) return 'gaming_competitor';
       return 'other';
+    };
+    
+    // 뉴스 타입 추론 함수
+    const inferNewsType = (news) => {
+      // CSV에 news_type이 있으면 사용
+      if (news.news_type) return news.news_type;
+      
+      // category_group으로 추론
+      const group = news.category_group || mapToGroupCategory(news.category || 'other');
+      
+      // 트래픽 영향 관련 그룹
+      if (['outage_block', 'social_crisis', 'seasonal_calendar'].includes(group)) {
+        return 'traffic_impact';
+      }
+      
+      // 게임 관련
+      return 'gaming';
     };
     
     // CSV에서 뉴스 로드
@@ -1543,7 +1590,7 @@
               // category_group이 CSV에 없으면 자동 매핑 (전역 함수 사용)
               const categoryGroup = row.category_group || mapToGroupCategory(category);
               
-              return {
+              const newsItem = {
                 date: row.date || '',
                 country: row.country || '',
                 continent: row.continent || '',
@@ -1553,22 +1600,44 @@
                 source: row.source || 'Unknown',
                 category: category,
                 category_group: categoryGroup,
-                traffic_impact: row.traffic_impact || ''
+                news_type: row.news_type || '', // CSV에서 news_type 로드
+                traffic_impact: row.traffic_impact || '',
+                priority: row.priority || 'medium'
               };
+              
+              // news_type이 없으면 추론
+              if (!newsItem.news_type) {
+                newsItem.news_type = inferNewsType(newsItem);
+              }
+              
+              return newsItem;
             });
             const mapTime = performance.now() - mapStartTime;
             console.log(`데이터 매핑 시간: ${mapTime.toFixed(2)}ms`);
             
-            // 카테고리 그룹별 통계 출력
+            // 통계 계산
             const groupStats = {};
+            let trafficCount = 0;
+            let gamingCount = 0;
+            
             allNewsData.forEach(news => {
               const group = news.category_group || 'other';
               groupStats[group] = (groupStats[group] || 0) + 1;
+              
+              if (news.news_type === 'traffic_impact') trafficCount++;
+              else gamingCount++;
             });
-            console.log('카테고리 그룹별 뉴스 수:', groupStats);
             
-            document.getElementById('newsMethodInfo').textContent = `총 ${allNewsData.length}개의 뉴스를 불러왔습니다. (${parseTime.toFixed(0)}ms)`;
-            filterNewsByCategory(currentCategoryFilter);
+            console.log('카테고리 그룹별 뉴스 수:', groupStats);
+            console.log(`뉴스 타입: 트래픽 영향 ${trafficCount}개, 게임 ${gamingCount}개`);
+            
+            // 통계 UI 업데이트
+            document.getElementById('totalNewsCount').textContent = allNewsData.length;
+            document.getElementById('trafficNewsCount').textContent = trafficCount;
+            document.getElementById('gamingNewsCount').textContent = gamingCount;
+            
+            document.getElementById('newsMethodInfo').textContent = `⚡ 트래픽 영향 ${trafficCount}개 / 🎮 게임 뉴스 ${gamingCount}개를 불러왔습니다.`;
+            applyNewsFilters();
           },
           error: (error) => {
             console.error('CSV 파싱 오류:', error);
@@ -1593,24 +1662,28 @@
       }
     }
     
-    // 카테고리별 필터링 (그룹 카테고리 기준)
-    function filterNewsByCategory(category){
+    // 통합 필터 적용 함수
+    function applyNewsFilters(){
       const filterStartTime = performance.now();
-      currentCategoryFilter = category;
       
       let filteredNews = allNewsData;
-      if(category !== 'all'){
-        // 그룹 카테고리로 필터링 (최적화: 매핑 함수 재사용)
-        filteredNews = allNewsData.filter(news => {
-          // category_group이 없으면 자동 매핑 (한 번만)
+      
+      // 1. 뉴스 타입 필터링
+      if(currentNewsTypeFilter !== 'all'){
+        filteredNews = filteredNews.filter(news => news.news_type === currentNewsTypeFilter);
+      }
+      
+      // 2. 카테고리 필터링
+      if(currentCategoryFilter !== 'all'){
+        filteredNews = filteredNews.filter(news => {
           if (!news.category_group) {
             news.category_group = mapToGroupCategory(news.category || 'other');
           }
-          return news.category_group === category;
+          return news.category_group === currentCategoryFilter;
         });
       }
       
-      // 날짜순 정렬 (최신순) - 성능 최적화
+      // 날짜순 정렬 (최신순)
       filteredNews.sort((a, b) => {
         const dateA = new Date(a.date);
         const dateB = new Date(b.date);
@@ -1621,6 +1694,31 @@
       console.log(`필터링 시간: ${filterTime.toFixed(2)}ms, 결과: ${filteredNews.length}개`);
       
       renderNews(filteredNews);
+    }
+    
+    // 뉴스 타입 필터링
+    function filterNewsByType(type){
+      currentNewsTypeFilter = type;
+      
+      // 뉴스 타입 버튼 활성화 상태 업데이트
+      document.querySelectorAll('.news-type-filter').forEach(btn => {
+        if(btn.dataset.type === type){
+          btn.classList.add('active');
+          btn.style.background = 'linear-gradient(135deg,#238636,#2ea043)';
+          btn.style.color = '#fff';
+        } else {
+          btn.classList.remove('active');
+          btn.style.background = 'var(--panel)';
+          btn.style.color = 'var(--muted)';
+        }
+      });
+      
+      applyNewsFilters();
+    }
+    
+    // 카테고리별 필터링 (그룹 카테고리 기준)
+    function filterNewsByCategory(category){
+      currentCategoryFilter = category;
       
       // 카테고리 버튼 활성화 상태 업데이트
       document.querySelectorAll('.category-filter').forEach(btn => {
@@ -1650,7 +1748,16 @@
           }
         }
       });
+      
+      applyNewsFilters();
     }
+    
+    // 뉴스 타입 필터 이벤트 리스너
+    document.querySelectorAll('.news-type-filter').forEach(btn => {
+      btn.addEventListener('click', () => {
+        filterNewsByType(btn.dataset.type);
+      });
+    });
     
     // 카테고리 필터 이벤트 리스너
     document.querySelectorAll('.category-filter').forEach(btn => {
@@ -1983,23 +2090,34 @@
           const categoryIcon = categoryIcons[news.category] || categoryIcons['other'];
           const categoryName = news.category.replace(/_/g, ' ');
           
+          // 뉴스 타입 스타일
+          const typeStyle = newsTypeStyles[news.news_type] || newsTypeStyles['gaming'];
+          const typeLabel = `<span style="padding:4px 10px;background:${typeStyle.bgColor};border:1px solid ${typeStyle.color};border-radius:4px;font-size:11px;color:${typeStyle.color};white-space:nowrap;font-weight:600">${typeStyle.icon} ${typeStyle.label}</span>`;
+          
           return `
-          <div class="news-item">
+          <div class="news-item" style="border-left:3px solid ${typeStyle.color}">
             <div class="news-content">
               <div class="news-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                ${typeLabel}
                 <a href="${news.url}" target="_blank" rel="noopener noreferrer" style="flex:1;min-width:200px">${news.title}</a>
-                <span style="padding:4px 10px;background:${groupColor}20;border:1px solid ${groupColor};border-radius:4px;font-size:11px;color:${groupColor};white-space:nowrap">
+              </div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+                <span style="padding:3px 8px;background:${groupColor}15;border:1px solid ${groupColor}50;border-radius:4px;font-size:10px;color:${groupColor}">
                   ${categoryIcon} ${categoryName}
                 </span>
-                ${news.country ? `<span style="padding:4px 10px;background:rgba(35,134,54,0.1);border:1px solid #238636;border-radius:4px;font-size:11px;color:#238636;white-space:nowrap">🌍 ${news.country}</span>` : ''}
+                ${news.country ? `<span style="padding:3px 8px;background:rgba(35,134,54,0.1);border:1px solid rgba(35,134,54,0.3);border-radius:4px;font-size:10px;color:#238636">🌍 ${news.country}</span>` : ''}
+                ${news.priority === 'high' ? `<span style="padding:3px 8px;background:rgba(255,107,107,0.15);border:1px solid rgba(255,107,107,0.3);border-radius:4px;font-size:10px;color:#ff6b6b">⚠️ HIGH</span>` : ''}
               </div>
-              <div class="news-meta">
+              <div class="news-meta" style="margin-top:8px">
                 <span class="news-source">${news.source}</span>
                 <span class="news-date">${news.date}</span>
                 ${news.continent ? `<span style="color:var(--muted);font-size:11px">${news.continent}</span>` : ''}
               </div>
-              <div class="news-snippet">${news.summary}</div>
-              ${news.traffic_impact ? `<div style="margin-top:8px;padding:8px;background:rgba(35,134,54,0.1);border-left:3px solid #238636;border-radius:4px;font-size:12px;color:var(--muted)"><strong style="color:#238636">💡 트래픽 영향:</strong> ${news.traffic_impact}</div>` : ''}
+              <div class="news-snippet" style="margin-top:8px">${news.summary}</div>
+              ${news.traffic_impact ? `<div style="margin-top:10px;padding:10px;background:rgba(255,107,107,0.08);border-left:3px solid #ff6b6b;border-radius:4px;font-size:12px;color:var(--muted)"><strong style="color:#ff6b6b">📊 트래픽 영향 분석:</strong> ${news.traffic_impact}</div>` : ''}
+              <div style="margin-top:10px;display:flex;gap:8px">
+                <a href="${news.url}" target="_blank" rel="noopener noreferrer" style="padding:6px 12px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:#fff;font-size:12px;text-decoration:none;transition:all 0.2s" onmouseover="this.style.borderColor='#238636'" onmouseout="this.style.borderColor='var(--border)'">📰 원문 보기</a>
+              </div>
             </div>
           </div>
         `;
@@ -2011,8 +2129,8 @@
         newsList.innerHTML = `
           <div class="empty-state">
             <div class="empty-state-icon">📰</div>
-            <div>해당 카테고리의 뉴스가 없습니다.</div>
-            <div style="margin-top:12px;font-size:12px;color:var(--muted)">다른 카테고리를 선택해보세요.</div>
+            <div>해당 필터에 맞는 뉴스가 없습니다.</div>
+            <div style="margin-top:12px;font-size:12px;color:var(--muted)">다른 필터를 선택해보세요.</div>
           </div>
         `;
       }

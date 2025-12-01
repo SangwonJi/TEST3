@@ -3,10 +3,44 @@
     "PUBG Mobile",
     "PUBG Esports",
     "Krafton",
-    "Battlegrounds Mobile",
-    "mobile gaming",
-    "mobile game traffic"
+    "Battlegrounds Mobile"
   ],
+  "gaming_keywords": {
+    "pubg": [
+      "PUBG Mobile update",
+      "PUBG Mobile esports",
+      "PUBG Mobile tournament",
+      "PUBG Mobile season",
+      "배틀그라운드 모바일",
+      "펍지 모바일"
+    ],
+    "krafton": [
+      "Krafton news",
+      "Krafton games",
+      "크래프톤"
+    ],
+    "esports": [
+      "PMGC",
+      "PMPL",
+      "PUBG esports",
+      "mobile esports",
+      "모바일 e스포츠"
+    ],
+    "competitor": [
+      "Free Fire update",
+      "Call of Duty Mobile update",
+      "Fortnite Mobile",
+      "Apex Legends Mobile",
+      "Honor of Kings",
+      "Mobile Legends"
+    ],
+    "industry": [
+      "mobile gaming market",
+      "mobile game revenue",
+      "app store gaming",
+      "Google Play games"
+    ]
+  },
   "priority_countries": {
     "Iraq": {
       "keywords": ["Iraq", "Baghdad", "Iraq news"],

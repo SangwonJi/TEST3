@@ -114,6 +114,101 @@ def map_to_group_category(detail_category: str) -> str:
         return 'other'
 
 
+# ============================================================
+# 스마트 필터링 (HIGH/MEDIUM/LOW Priority)
+# ============================================================
+
+# HIGH Priority 키워드 (AI 정제 필수 - 트래픽 영향 뉴스)
+HIGH_PRIORITY_KEYWORDS = {
+    'critical': [
+        'internet shutdown', 'blackout', 'power outage', 'outage',
+        'war', 'explosion', 'bombing', 'attack', 'terrorism', 'terrorist',
+        'earthquake', 'flood', 'disaster', 'emergency', 'tsunami', 'typhoon',
+        'curfew', 'protest', 'riot', 'strike', 'unrest',
+        'shutdown', 'ban', 'block', 'censorship'
+    ],
+    'countries': [
+        'Iraq', 'Pakistan', 'Turkey', 'Russia', 'Egypt',
+        'Saudi Arabia', 'Indonesia', 'Hong Kong', 'Iran', 'Syria',
+        'Baghdad', 'Karachi', 'Istanbul', 'Moscow', 'Cairo', 'Jakarta'
+    ]
+}
+
+# MEDIUM Priority 키워드 (규칙 기반 자동 분류)
+MEDIUM_RULES = {
+    'gaming': ['PUBG', 'Krafton', 'mobile game', 'esports', 'e-sports', 'tournament', 'season', 'update'],
+    'holiday': ['holiday', 'festival', 'Eid', 'Christmas', 'New Year', 'Ramadan', 'Diwali'],
+    'school': ['school', 'exam', 'vacation', 'semester', 'break', 'academic']
+}
+
+# LOW Priority (제외할 패턴)
+EXCLUDE_PATTERNS = [
+    '광고', 'sponsored', 'affiliate', 'promotion',
+    '주식', 'stock price', 'earnings', 'investor',
+    '채용', 'hiring', 'job opening', 'career'
+]
+
+
+def classify_news_priority(title: str, summary: str) -> tuple:
+    """
+    뉴스의 우선순위를 분류
+    
+    Args:
+        title: 뉴스 제목
+        summary: 뉴스 요약
+    
+    Returns:
+        (priority, news_type, auto_category)
+        - priority: 'high', 'medium', 'low'
+        - news_type: 'traffic_impact', 'gaming', None
+        - auto_category: 자동 분류된 카테고리 (medium인 경우)
+    """
+    text = f"{title} {summary}".lower()
+    
+    # LOW Priority 체크 (제외)
+    for pattern in EXCLUDE_PATTERNS:
+        if pattern.lower() in text:
+            return ('low', None, None)
+    
+    # HIGH Priority 체크 (트래픽 영향 뉴스 - AI 정제 대상)
+    for keyword in HIGH_PRIORITY_KEYWORDS['critical']:
+        if keyword.lower() in text:
+            return ('high', 'traffic_impact', None)
+    
+    for country in HIGH_PRIORITY_KEYWORDS['countries']:
+        if country.lower() in text:
+            # 국가 언급 + 위기 키워드가 있으면 HIGH
+            for keyword in HIGH_PRIORITY_KEYWORDS['critical']:
+                if keyword.lower() in text:
+                    return ('high', 'traffic_impact', None)
+    
+    # MEDIUM Priority 체크 (규칙 기반 자동 분류)
+    for category, keywords in MEDIUM_RULES.items():
+        for keyword in keywords:
+            if keyword.lower() in text:
+                if category == 'gaming':
+                    return ('medium', 'gaming', 'gaming')
+                elif category == 'holiday':
+                    return ('medium', 'traffic_impact', 'holiday')
+                elif category == 'school':
+                    return ('medium', 'traffic_impact', 'school_calendar')
+    
+    # 기본값: MEDIUM, gaming
+    return ('medium', 'gaming', 'gaming')
+
+
+def clean_html_tags(text: str) -> str:
+    """HTML 태그 제거"""
+    import re
+    # HTML 태그 제거
+    clean = re.sub(r'<[^>]+>', '', text)
+    # HTML 엔티티 제거
+    clean = re.sub(r'&[a-zA-Z]+;', ' ', clean)
+    # 여러 공백을 하나로
+    clean = re.sub(r'\s+', ' ', clean)
+    return clean.strip()
+
+
 def fetch_news_from_openai(keyword: str, countries: List[Dict] = None) -> List[Dict]:
     """
     OpenAI API를 사용하여 뉴스 검색 및 분석
@@ -403,19 +498,34 @@ def fetch_news_from_rss(keyword: str, max_retries: int = 3) -> List[Dict]:
                 if pub_date < datetime.now() - timedelta(days=7):
                     continue
                 
+                # HTML 태그 제거
+                clean_title = clean_html_tags(entry.get('title', ''))
+                clean_summary = clean_html_tags(entry.get('summary', ''))[:500]
+                
+                # 우선순위 및 뉴스 타입 분류
+                priority, news_type, auto_category = classify_news_priority(clean_title, clean_summary)
+                
+                # LOW priority는 제외
+                if priority == 'low':
+                    continue
+                
                 news_item = {
                     'date': pub_date.strftime('%Y-%m-%d'),
                     'country': None,  # 키워드에서 추출
                     'continent': None,
-                    'title': entry.get('title', '').strip(),
-                    'summary': entry.get('summary', '').strip()[:500],  # 최대 500자
+                    'title': clean_title,
+                    'summary': clean_summary,
                     'url': entry.get('link', ''),
                     'source': entry.get('source', {}).get('title', 'Google News'),
-                    'category': 'gaming'
+                    'category': auto_category if auto_category else 'gaming',
+                    'news_type': news_type if news_type else 'gaming',
+                    'priority': priority
                 }
                 
                 # 국가명 추출 (키워드에서)
-                for country in load_keywords().get('country_keywords', {}).keys():
+                keywords_config = load_keywords()
+                priority_countries = keywords_config.get('priority_countries', {})
+                for country in priority_countries.keys():
                     if country.lower() in keyword.lower():
                         news_item['country'] = country
                         news_item['continent'] = get_continent(country)
@@ -825,9 +935,9 @@ def save_to_csv(all_news: List[Dict]):
         # DataFrame 생성
         df = pd.DataFrame(all_news)
         
-        # 컬럼 순서 지정 (교차검증 컬럼 포함)
-        base_columns = ['date', 'country', 'continent', 'title', 'summary', 'url', 'source', 'category', 'category_group', 'traffic_impact']
-        optional_columns = ['confidence', 'validation', 'openai_summary', 'claude_summary']
+        # 컬럼 순서 지정 (news_type 및 교차검증 컬럼 포함)
+        base_columns = ['date', 'country', 'continent', 'title', 'summary', 'url', 'source', 'category', 'category_group', 'news_type', 'traffic_impact']
+        optional_columns = ['priority', 'confidence', 'validation', 'openai_summary', 'claude_summary']
         
         # 모든 컬럼 확인
         all_columns = base_columns + [col for col in optional_columns if col in df.columns]
@@ -849,15 +959,16 @@ def save_to_csv(all_news: List[Dict]):
 
 
 def main():
-    """메인 함수"""
+    """메인 함수 - 스마트 필터링 적용"""
     logger.info("=" * 50)
-    logger.info("뉴스 수집 시작 (RSS → AI 정제 방식)")
+    logger.info("뉴스 수집 시작 (스마트 필터링 + AI 정제)")
     logger.info("=" * 50)
     
     try:
         # 키워드 로드
         keywords_config = load_keywords()
         base_keywords = keywords_config.get('base_keywords', [])
+        gaming_keywords = keywords_config.get('gaming_keywords', {})
         priority_countries = keywords_config.get('priority_countries', {})
         traffic_impact_keywords = keywords_config.get('traffic_impact_keywords', {})
         
@@ -865,59 +976,111 @@ def main():
         existing_news = load_existing_news()
         logger.info(f"기존 뉴스: {len(existing_news)}개")
         
-        # 1단계: RSS로 뉴스 수집
-        logger.info("=" * 50)
-        logger.info("1단계: RSS로 뉴스 수집 중...")
-        logger.info("=" * 50)
-        
         all_raw_news = []
         
-        # 기본 키워드로 검색
+        # ============================================================
+        # 1단계: 게임 뉴스 수집 (gaming_keywords)
+        # ============================================================
+        logger.info("=" * 50)
+        logger.info("1단계: 게임 뉴스 수집 중...")
+        logger.info("=" * 50)
+        
+        # 기본 PUBG 키워드
         for keyword in base_keywords:
             news = fetch_news_from_rss(keyword)
+            for item in news:
+                item['news_type'] = 'gaming'
             all_raw_news.extend(news)
-            time.sleep(1)  # API 부하 방지
+            time.sleep(0.5)
         
-        # 주요 국가별 검색 (제한: 각 국가당 최대 5개 키워드)
+        # 게임 키워드 (각 카테고리당 2개씩)
+        for category, keywords in gaming_keywords.items():
+            for keyword in keywords[:2]:
+                news = fetch_news_from_rss(keyword)
+                for item in news:
+                    item['news_type'] = 'gaming'
+                    item['category'] = 'gaming' if category in ['pubg', 'krafton', 'esports'] else 'competitor_game'
+                all_raw_news.extend(news)
+                time.sleep(0.5)
+        
+        gaming_count = len(all_raw_news)
+        logger.info(f"게임 뉴스 수집 완료: {gaming_count}개")
+        
+        # ============================================================
+        # 2단계: 트래픽 영향 뉴스 수집 (주요 국가 + 위기 키워드)
+        # ============================================================
+        logger.info("=" * 50)
+        logger.info("2단계: 트래픽 영향 뉴스 수집 중...")
+        logger.info("=" * 50)
+        
+        # 주요 국가별 검색
         for country, country_info in priority_countries.items():
-            # 국가 키워드 (최대 2개)
-            for keyword in country_info.get('keywords', [])[:2]:
+            # 국가 키워드 (최대 1개)
+            for keyword in country_info.get('keywords', [])[:1]:
                 news = fetch_news_from_rss(keyword)
                 for item in news:
                     item['country'] = country
                     item['continent'] = get_continent(country)
                 all_raw_news.extend(news)
-                time.sleep(1)
+                time.sleep(0.5)
             
-            # 국가별 주제 키워드 (최대 3개)
-            for topic in country_info.get('topics', [])[:3]:
+            # 국가별 주제 키워드 (최대 2개)
+            for topic in country_info.get('topics', [])[:2]:
                 keyword = f"{country} {topic}"
                 news = fetch_news_from_rss(keyword)
                 for item in news:
                     item['country'] = country
                     item['continent'] = get_continent(country)
                 all_raw_news.extend(news)
-                time.sleep(1)
+                time.sleep(0.5)
         
-        # 트래픽 영향 키워드 검색 (제한: 각 카테고리당 최대 2개, 총 20개 이하)
+        # 트래픽 영향 키워드 (각 카테고리당 1개, 총 15개)
         keyword_count = 0
-        max_traffic_keywords = 20
+        max_traffic_keywords = 15
         for category, keywords in traffic_impact_keywords.items():
             if keyword_count >= max_traffic_keywords:
                 break
-            for keyword in keywords[:2]:  # 각 카테고리당 최대 2개 키워드
+            for keyword in keywords[:1]:
                 if keyword_count >= max_traffic_keywords:
                     break
                 news = fetch_news_from_rss(keyword)
                 all_raw_news.extend(news)
                 keyword_count += 1
-                time.sleep(1)
+                time.sleep(0.5)
         
-        logger.info(f"RSS 수집 완료: {len(all_raw_news)}개 뉴스")
+        traffic_count = len(all_raw_news) - gaming_count
+        logger.info(f"트래픽 영향 뉴스 수집 완료: {traffic_count}개")
+        logger.info(f"총 RSS 수집: {len(all_raw_news)}개")
         
-        # 2단계: AI로 정제
+        # ============================================================
+        # 3단계: 스마트 필터링 및 분류
+        # ============================================================
         logger.info("=" * 50)
-        logger.info("2단계: AI로 뉴스 정제 중...")
+        logger.info("3단계: 스마트 필터링 중...")
+        logger.info("=" * 50)
+        
+        high_priority_news = []
+        medium_priority_news = []
+        
+        for news_item in all_raw_news:
+            priority = news_item.get('priority', 'medium')
+            
+            if priority == 'high':
+                high_priority_news.append(news_item)
+            else:
+                # MEDIUM: 규칙 기반 자동 분류 완료
+                if not news_item.get('category_group'):
+                    news_item['category_group'] = map_to_group_category(news_item.get('category', 'gaming'))
+                medium_priority_news.append(news_item)
+        
+        logger.info(f"HIGH Priority (AI 정제 대상): {len(high_priority_news)}개")
+        logger.info(f"MEDIUM Priority (규칙 기반): {len(medium_priority_news)}개")
+        
+        # ============================================================
+        # 4단계: HIGH Priority만 AI 정제
+        # ============================================================
+        logger.info("=" * 50)
+        logger.info("4단계: HIGH Priority 뉴스 AI 정제 중...")
         logger.info("=" * 50)
         
         # API 타입 결정
@@ -925,45 +1088,64 @@ def main():
         if api_type not in ['openai', 'claude']:
             api_type = 'openai'
         
-        logger.info(f"사용할 AI API: {api_type.upper()}")
+        # API 키 확인
+        has_api_key = bool(os.getenv('OPENAI_API_KEY') or os.getenv('CLAUDE_API_KEY') or os.getenv('ANTHROPIC_API_KEY'))
         
         all_refined_news = []
         skipped_count = 0
         
-        # AI 정제는 최대 100개까지만 (너무 많으면 시간이 오래 걸림)
-        max_refine_count = 100
-        news_to_refine = all_raw_news[:max_refine_count]
-        
-        if len(all_raw_news) > max_refine_count:
-            logger.warning(f"수집된 뉴스가 너무 많습니다 ({len(all_raw_news)}개). 최신 {max_refine_count}개만 정제합니다.")
-        
-        for i, news_item in enumerate(news_to_refine, 1):
-            if i % 10 == 0:
-                logger.info(f"정제 진행 중: {i}/{len(news_to_refine)}")
+        if has_api_key and high_priority_news:
+            logger.info(f"사용할 AI API: {api_type.upper()}")
             
-            refined = refine_news_with_ai(news_item, api_type)
+            # HIGH Priority만 AI 정제 (최대 50개)
+            max_refine_count = 50
+            news_to_refine = high_priority_news[:max_refine_count]
             
-            if refined is None:
-                skipped_count += 1
-            else:
-                all_refined_news.append(refined)
+            if len(high_priority_news) > max_refine_count:
+                logger.warning(f"HIGH Priority가 {len(high_priority_news)}개로 많습니다. 최신 {max_refine_count}개만 정제합니다.")
             
-            time.sleep(1)  # API Rate Limit 방지
-        
-        # 정제하지 않은 나머지 뉴스는 기본 카테고리로 추가
-        if len(all_raw_news) > max_refine_count:
-            remaining_news = all_raw_news[max_refine_count:]
-            for item in remaining_news:
-                # category가 없으면 기본값 설정
-                if not item.get('category'):
-                    item['category'] = 'other'
-                # category_group이 없으면 자동 매핑
+            for i, news_item in enumerate(news_to_refine, 1):
+                if i % 10 == 0:
+                    logger.info(f"정제 진행 중: {i}/{len(news_to_refine)}")
+                
+                refined = refine_news_with_ai(news_item, api_type)
+                
+                if refined is None:
+                    skipped_count += 1
+                else:
+                    all_refined_news.append(refined)
+                
+                time.sleep(1)  # API Rate Limit 방지
+            
+            # 정제하지 않은 HIGH Priority 뉴스 추가
+            if len(high_priority_news) > max_refine_count:
+                remaining_high = high_priority_news[max_refine_count:]
+                for item in remaining_high:
+                    if not item.get('category_group'):
+                        item['category_group'] = map_to_group_category(item.get('category', 'other'))
+                all_refined_news.extend(remaining_high)
+            
+            logger.info(f"AI 정제 완료: {len(all_refined_news)}개 (스킵: {skipped_count}개)")
+        else:
+            if not has_api_key:
+                logger.info("API 키 없음 - HIGH Priority도 규칙 기반 분류")
+            
+            # API 키 없으면 규칙 기반으로 처리
+            for item in high_priority_news:
                 if not item.get('category_group'):
                     item['category_group'] = map_to_group_category(item.get('category', 'other'))
-            all_refined_news.extend(remaining_news)
-            logger.info(f"추가 {len(remaining_news)}개 뉴스를 기본 카테고리로 추가했습니다.")
+            all_refined_news.extend(high_priority_news)
         
-        logger.info(f"AI 정제 완료: {len(all_refined_news)}개 (스킵: {skipped_count}개)")
+        # MEDIUM Priority 뉴스 추가
+        all_refined_news.extend(medium_priority_news)
+        
+        logger.info(f"총 처리된 뉴스: {len(all_refined_news)}개")
+        
+        # 뉴스 타입별 통계
+        gaming_final = sum(1 for n in all_refined_news if n.get('news_type') == 'gaming')
+        traffic_final = sum(1 for n in all_refined_news if n.get('news_type') == 'traffic_impact')
+        logger.info(f"  - 🎮 게임 뉴스: {gaming_final}개")
+        logger.info(f"  - ⚡ 트래픽 영향 뉴스: {traffic_final}개")
         
         # 중복 제거
         unique_new_news = remove_duplicates(existing_news, all_refined_news)
