@@ -287,7 +287,7 @@ def create_slack_message(traffic_news, gaming_news):
             "type": "section",
             "text": {
                 "type": "mrkdwn",
-                "text": f"*🎯 트래픽 영향 요약*\n{ai_summary}"
+                "text": f"*🥽 GPT + CLAUDE 분석 의견*\n{ai_summary}"
             }
         }
     ]
