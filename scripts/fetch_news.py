@@ -258,6 +258,126 @@ JSON 배열만 응답하세요:
 
 
 # ============================================================
+# 네이버 검색 API (국내 뉴스)
+# ============================================================
+
+def fetch_from_naver(keywords: List[str], max_results: int = 50) -> List[Dict]:
+    """
+    네이버 검색 API로 국내 뉴스 검색
+    - 일 25,000회 무료
+    - 국내 300+ 언론사 커버
+    
+    API 발급: https://developers.naver.com/
+    """
+    client_id = os.getenv('NAVER_CLIENT_ID')
+    client_secret = os.getenv('NAVER_CLIENT_SECRET')
+    
+    if not client_id or not client_secret:
+        logger.info("NAVER API 키 없음 - 네이버 스킵")
+        return []
+    
+    try:
+        import requests
+        import urllib.parse
+        
+        results = []
+        
+        for keyword in keywords[:15]:  # 최대 15개 키워드
+            try:
+                encoded_keyword = urllib.parse.quote(keyword)
+                
+                response = requests.get(
+                    f"https://openapi.naver.com/v1/search/news.json",
+                    params={
+                        "query": keyword,
+                        "display": 10,  # 최대 10개
+                        "sort": "date"  # 최신순
+                    },
+                    headers={
+                        "X-Naver-Client-Id": client_id,
+                        "X-Naver-Client-Secret": client_secret
+                    },
+                    timeout=10
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    items = data.get('items', [])
+                    
+                    for item in items:
+                        # HTML 태그 제거
+                        title = item.get('title', '').replace('<b>', '').replace('</b>', '')
+                        description = item.get('description', '').replace('<b>', '').replace('</b>', '')
+                        
+                        # 날짜 파싱 (RFC 2822 형식)
+                        pub_date = item.get('pubDate', '')
+                        try:
+                            from email.utils import parsedate_to_datetime
+                            dt = parsedate_to_datetime(pub_date)
+                            date_str = dt.strftime('%Y-%m-%d')
+                        except:
+                            date_str = datetime.now().strftime('%Y-%m-%d')
+                        
+                        news_item = {
+                            'date': date_str,
+                            'country': 'Korea',
+                            'continent': 'ASIA',
+                            'title': title,
+                            'summary': description[:500],
+                            'url': item.get('originallink') or item.get('link', ''),
+                            'source': '네이버 뉴스',
+                            'category': 'gaming',  # 기본값
+                            'news_type': 'gaming',
+                            'priority': 'medium',
+                            'api_source': 'naver'
+                        }
+                        
+                        # 카테고리 추론
+                        text = f"{title} {description}".lower()
+                        if any(k in text for k in ['지진', 'earthquake', '홍수', 'flood', '태풍']):
+                            news_item['category'] = 'natural_disaster'
+                            news_item['news_type'] = 'traffic_impact'
+                            news_item['priority'] = 'high'
+                        elif any(k in text for k in ['전쟁', 'war', '폭발', 'explosion', '테러']):
+                            news_item['category'] = 'war_conflict'
+                            news_item['news_type'] = 'traffic_impact'
+                            news_item['priority'] = 'high'
+                        elif any(k in text for k in ['공휴일', '명절', '휴일', 'holiday']):
+                            news_item['category'] = 'holiday'
+                            news_item['news_type'] = 'traffic_impact'
+                        elif any(k in text for k in ['pubg', '펍지', '배틀그라운드', '크래프톤', 'krafton']):
+                            news_item['category'] = 'gaming'
+                            news_item['news_type'] = 'gaming'
+                        
+                        results.append(news_item)
+                    
+                    logger.info(f"네이버 '{keyword}': {len(items)}개 수집")
+                else:
+                    logger.warning(f"네이버 API 오류: {response.status_code} - {response.text[:100]}")
+                
+                time.sleep(0.1)  # Rate limit (초당 10회 제한)
+                
+            except Exception as e:
+                logger.error(f"네이버 '{keyword}' 검색 실패: {e}")
+                continue
+        
+        # 중복 제거
+        seen_urls = set()
+        unique_results = []
+        for item in results:
+            if item['url'] not in seen_urls:
+                seen_urls.add(item['url'])
+                unique_results.append(item)
+        
+        logger.info(f"네이버 총 수집: {len(unique_results)}개")
+        return unique_results[:max_results]
+        
+    except Exception as e:
+        logger.error(f"네이버 API 호출 실패: {e}")
+        return []
+
+
+# ============================================================
 # DeepSearch News API (국내/해외 고품질 뉴스)
 # ============================================================
 
@@ -1402,6 +1522,27 @@ def main():
             all_raw_news.extend(trending_news)
             
             logger.info(f"DeepSearch 수집 완료: {len(deepsearch_news) + len(trending_news)}개")
+        
+        # ============================================================
+        # 0-B단계: 네이버 검색 API로 국내 뉴스 수집 (선택적)
+        # ============================================================
+        if os.getenv('NAVER_CLIENT_ID') and os.getenv('NAVER_CLIENT_SECRET'):
+            logger.info("=" * 50)
+            logger.info("0-B단계: 네이버 국내 뉴스 수집...")
+            logger.info("=" * 50)
+            
+            # 국내 뉴스 검색 키워드
+            naver_keywords = [
+                "PUBG 모바일", "펍지 모바일", "배틀그라운드 모바일",
+                "크래프톤", "모바일 게임",
+                "인터넷 장애", "통신 장애",
+                "지진 속보", "태풍 속보"
+            ]
+            
+            naver_news = fetch_from_naver(naver_keywords, max_results=30)
+            all_raw_news.extend(naver_news)
+            
+            logger.info(f"네이버 수집 완료: {len(naver_news)}개")
         
         # ============================================================
         # 1단계: 게임 뉴스 수집 (gaming_keywords)
