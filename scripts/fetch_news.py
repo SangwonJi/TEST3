@@ -258,93 +258,162 @@ JSON 배열만 응답하세요:
 
 
 # ============================================================
-# 무료 API: Google Gemini
+# DeepSearch News API (국내/해외 고품질 뉴스)
 # ============================================================
 
-def fetch_from_gemini(news_items: List[Dict], batch_size: int = 5) -> List[Dict]:
+def fetch_from_deepsearch(keywords: List[str], countries: List[str] = None, max_results: int = 50) -> List[Dict]:
     """
-    Google Gemini API로 뉴스 분석 (무료 티어)
-    - Gemini 1.5 Flash 사용
-    - 분당 15회, 일 1,500회 무료
+    DeepSearch News API로 고품질 뉴스 검색
+    - 국내: 조선, 한겨레, 동아 등
+    - 해외: NYT, BBC, Washington Post, CNN 등
     
-    API 키 발급: https://aistudio.google.com/
+    API 문서: https://api-v2.deepsearch.com
     """
-    api_key = os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')
+    api_key = os.getenv('DEEPSEARCH_API_KEY')
     if not api_key:
-        logger.info("GEMINI_API_KEY 없음 - Gemini 스킵")
-        return news_items
+        logger.info("DEEPSEARCH_API_KEY 없음 - DeepSearch 스킵")
+        return []
+    
+    try:
+        import requests
+        from datetime import datetime, timedelta
+        
+        results = []
+        
+        # 날짜 범위 (최근 7일)
+        date_to = datetime.now().strftime('%Y-%m-%d')
+        date_from = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
+        
+        for keyword in keywords[:10]:  # 최대 10개 키워드
+            try:
+                # 해외 뉴스 검색 (global-articles)
+                response = requests.get(
+                    "https://api-v2.deepsearch.com/v1/global-articles",
+                    params={
+                        "api_key": api_key,
+                        "keyword": keyword,
+                        "date_from": date_from,
+                        "date_to": date_to,
+                        "page_size": 10,
+                        "page": 1
+                    },
+                    timeout=15
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    articles = data.get('data', [])
+                    
+                    for article in articles:
+                        news_item = {
+                            'date': article.get('published_at', '')[:10] if article.get('published_at') else date_to,
+                            'country': None,
+                            'continent': None,
+                            'title': article.get('title', ''),
+                            'summary': article.get('summary', '')[:500],
+                            'url': article.get('url', ''),
+                            'source': article.get('publisher', 'DeepSearch'),
+                            'category': 'other',
+                            'news_type': 'traffic_impact',
+                            'priority': 'high',
+                            'api_source': 'deepsearch'
+                        }
+                        
+                        # 국가 추론 (키워드에서)
+                        if countries:
+                            for country in countries:
+                                if country.lower() in keyword.lower() or country.lower() in news_item['title'].lower():
+                                    news_item['country'] = country
+                                    news_item['continent'] = get_continent(country)
+                                    break
+                        
+                        results.append(news_item)
+                    
+                    logger.info(f"DeepSearch '{keyword}': {len(articles)}개 수집")
+                else:
+                    logger.warning(f"DeepSearch API 오류: {response.status_code}")
+                
+                time.sleep(0.5)  # Rate limit
+                
+            except Exception as e:
+                logger.error(f"DeepSearch 키워드 '{keyword}' 검색 실패: {e}")
+                continue
+        
+        # 중복 제거 (URL 기준)
+        seen_urls = set()
+        unique_results = []
+        for item in results:
+            if item['url'] not in seen_urls:
+                seen_urls.add(item['url'])
+                unique_results.append(item)
+        
+        logger.info(f"DeepSearch 총 수집: {len(unique_results)}개 (중복 제거됨)")
+        return unique_results[:max_results]
+        
+    except Exception as e:
+        logger.error(f"DeepSearch API 호출 실패: {e}")
+        return []
+
+
+def fetch_trending_from_deepsearch(sections: List[str] = None) -> List[Dict]:
+    """
+    DeepSearch에서 트렌딩 토픽 가져오기
+    - 해외 주요 이슈 자동 수집
+    """
+    api_key = os.getenv('DEEPSEARCH_API_KEY')
+    if not api_key:
+        return []
     
     try:
         import requests
         
+        sections = sections or ['world', 'business', 'technology']
         results = []
-        for i in range(0, len(news_items), batch_size):
-            batch = news_items[i:i+batch_size]
-            
-            news_text = "\n".join([
-                f"{j+1}. 제목: {item.get('title', '')}\n   내용: {item.get('summary', '')[:200]}"
-                for j, item in enumerate(batch)
-            ])
-            
-            prompt = f"""다음 {len(batch)}개 뉴스를 분석하고 JSON 배열로 응답해주세요.
-
-{news_text}
-
-각 뉴스에 대해:
-- category: 세부 카테고리 (internet_shutdown, war_conflict, natural_disaster, holiday, gaming, protest_strike, economic, other)
-- summary_kr: 한국어 2줄 요약
-- traffic_impact: 모바일 게임 트래픽 영향 분석
-- country: 관련 국가 (없으면 null)
-
-JSON 배열만 응답:
-[{{"id": 1, "category": "...", "summary_kr": "...", "traffic_impact": "...", "country": "..."}}, ...]"""
-
-            response = requests.post(
-                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}",
-                headers={"Content-Type": "application/json"},
-                json={
-                    "contents": [{"parts": [{"text": prompt}]}],
-                    "generationConfig": {
-                        "temperature": 0.3,
-                        "maxOutputTokens": 1500
-                    }
-                },
-                timeout=30
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                content = data.get('candidates', [{}])[0].get('content', {}).get('parts', [{}])[0].get('text', '')
-                
-                import re
-                json_match = re.search(r'\[[\s\S]*\]', content)
-                if json_match:
-                    analysis = json.loads(json_match.group())
-                    
-                    for j, item in enumerate(batch):
-                        if j < len(analysis):
-                            a = analysis[j]
-                            item['category'] = a.get('category', item.get('category', 'other'))
-                            item['summary'] = a.get('summary_kr', item.get('summary', ''))
-                            item['traffic_impact'] = a.get('traffic_impact', '')
-                            if a.get('country'):
-                                item['country'] = a.get('country')
-                            item['api_source'] = 'gemini'
-                        results.append(item)
-                else:
-                    results.extend(batch)
-            else:
-                logger.warning(f"Gemini API 오류: {response.status_code} - {response.text[:200]}")
-                results.extend(batch)
-            
-            time.sleep(1)  # Rate limit 방지 (분당 15회)
         
-        logger.info(f"Gemini 분석 완료: {len(results)}개")
+        for section in sections:
+            try:
+                response = requests.get(
+                    f"https://api-v2.deepsearch.com/v1/global-articles/topics/{section}/trending",
+                    params={
+                        "api_key": api_key,
+                        "page_size": 5
+                    },
+                    timeout=15
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    topics = data.get('data', [])
+                    
+                    for topic in topics:
+                        news_item = {
+                            'date': topic.get('date', '')[:10] if topic.get('date') else '',
+                            'country': None,
+                            'continent': None,
+                            'title': topic.get('title', '') or topic.get('title_kr', ''),
+                            'summary': topic.get('briefing', '')[:500],
+                            'url': f"https://deepsearch.com/topic/{topic.get('id', '')}",
+                            'source': 'DeepSearch Trending',
+                            'category': 'major_event',
+                            'news_type': 'traffic_impact',
+                            'priority': 'high',
+                            'api_source': 'deepsearch_trending'
+                        }
+                        results.append(news_item)
+                    
+                    logger.info(f"DeepSearch Trending '{section}': {len(topics)}개")
+                    
+            except Exception as e:
+                logger.error(f"DeepSearch Trending '{section}' 실패: {e}")
+                continue
+            
+            time.sleep(0.3)
+        
         return results
         
     except Exception as e:
-        logger.error(f"Gemini API 호출 실패: {e}")
-        return news_items
+        logger.error(f"DeepSearch Trending 실패: {e}")
+        return []
 
 
 # ============================================================
@@ -354,9 +423,8 @@ JSON 배열만 응답:
 def smart_refine_batch(news_items: List[Dict], use_paid_api: bool = False) -> List[Dict]:
     """
     스마트 배치 정제
-    1단계: Groq (무료, 빠름) - 기본 분류
-    2단계: Gemini (무료) - 심층 분석 (HIGH priority만)
-    3단계: OpenAI/Claude (유료, 선택적) - 최종 검증
+    1단계: Groq (무료, 빠름) - 기본 분류 + 요약
+    2단계: OpenAI/Claude (유료, 선택적) - 상위 10개 최종 검증
     """
     if not news_items:
         return []
@@ -384,40 +452,32 @@ def smart_refine_batch(news_items: List[Dict], use_paid_api: bool = False) -> Li
     if not to_process:
         return news_items
     
-    # 1단계: Groq으로 빠른 분류 (무료)
+    # 1단계: Groq으로 빠른 분류 (무료, 초고속)
     groq_key = os.getenv('GROQ_API_KEY')
     if groq_key:
-        logger.info("1단계: Groq으로 빠른 분류...")
+        logger.info("1단계: Groq (Llama 3.1)으로 빠른 분류...")
         to_process = fetch_from_groq(to_process)
     
-    # 2단계: HIGH priority만 Gemini로 심층 분석 (무료)
-    high_priority = [n for n in to_process if n.get('priority') == 'high']
-    gemini_key = os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')
-    
-    if gemini_key and high_priority:
-        logger.info(f"2단계: Gemini로 심층 분석 ({len(high_priority)}개 HIGH priority)...")
-        refined_high = fetch_from_gemini(high_priority)
-        
-        # 결과 병합
-        high_urls = {n['url'] for n in high_priority}
-        to_process = [n for n in to_process if n['url'] not in high_urls] + refined_high
-    
-    # 3단계: 유료 API (선택적, 최상위 10개만)
+    # 2단계: 유료 API (선택적, 상위 10개만)
     if use_paid_api:
         openai_key = os.getenv('OPENAI_API_KEY')
         claude_key = os.getenv('CLAUDE_API_KEY') or os.getenv('ANTHROPIC_API_KEY')
         
         if openai_key or claude_key:
-            # 가장 중요한 10개만 유료 API로 검증
-            top_news = sorted(to_process, key=lambda x: x.get('priority', 'medium') == 'high', reverse=True)[:10]
-            logger.info(f"3단계: 유료 API로 최종 검증 ({len(top_news)}개)...")
+            # HIGH priority 중 상위 10개만 유료 API로 검증
+            high_priority = [n for n in to_process if n.get('priority') == 'high']
+            top_news = high_priority[:10]
             
-            for item in top_news:
-                if openai_key:
-                    refined = refine_news_with_ai(item, 'openai')
+            if top_news:
+                logger.info(f"2단계: 유료 API로 심층 분석 ({len(top_news)}개)...")
+                
+                for item in top_news:
+                    api_type = 'openai' if openai_key else 'claude'
+                    refined = refine_news_with_ai(item, api_type)
                     if refined:
                         item.update(refined)
-                        item['api_source'] = 'openai'
+                        item['api_source'] = api_type
+                    time.sleep(0.5)
     
     # 캐시 업데이트
     for item in to_process:
@@ -1287,8 +1347,21 @@ def save_to_csv(all_news: List[Dict]):
 def main():
     """메인 함수 - 스마트 필터링 적용"""
     logger.info("=" * 50)
-    logger.info("뉴스 수집 시작 (스마트 필터링 + AI 정제)")
+    logger.info("뉴스 수집 시작 (RSS + DeepSearch + AI 정제)")
     logger.info("=" * 50)
+    
+    # 사용 가능한 API 확인
+    apis_available = []
+    if os.getenv('DEEPSEARCH_API_KEY'):
+        apis_available.append('DeepSearch')
+    if os.getenv('GROQ_API_KEY'):
+        apis_available.append('Groq')
+    if os.getenv('OPENAI_API_KEY'):
+        apis_available.append('OpenAI')
+    if os.getenv('CLAUDE_API_KEY') or os.getenv('ANTHROPIC_API_KEY'):
+        apis_available.append('Claude')
+    
+    logger.info(f"사용 가능한 API: {', '.join(apis_available) if apis_available else 'RSS만 사용'}")
     
     try:
         # 키워드 로드
@@ -1303,6 +1376,32 @@ def main():
         logger.info(f"기존 뉴스: {len(existing_news)}개")
         
         all_raw_news = []
+        
+        # ============================================================
+        # 0단계: DeepSearch로 고품질 글로벌 뉴스 수집 (선택적)
+        # ============================================================
+        if os.getenv('DEEPSEARCH_API_KEY'):
+            logger.info("=" * 50)
+            logger.info("0단계: DeepSearch 고품질 글로벌 뉴스 수집...")
+            logger.info("=" * 50)
+            
+            # 트래픽 영향 키워드로 검색
+            deepsearch_keywords = [
+                "internet shutdown", "power outage", "earthquake",
+                "war conflict", "protest", "holiday", "gaming mobile"
+            ]
+            
+            # 주요 국가 리스트
+            country_list = list(priority_countries.keys())
+            
+            deepsearch_news = fetch_from_deepsearch(deepsearch_keywords, country_list, max_results=30)
+            all_raw_news.extend(deepsearch_news)
+            
+            # 트렌딩 토픽도 수집
+            trending_news = fetch_trending_from_deepsearch(['world', 'technology'])
+            all_raw_news.extend(trending_news)
+            
+            logger.info(f"DeepSearch 수집 완료: {len(deepsearch_news) + len(trending_news)}개")
         
         # ============================================================
         # 1단계: 게임 뉴스 수집 (gaming_keywords)
