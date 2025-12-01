@@ -740,6 +740,16 @@ EXCLUDE_PATTERNS = [
     # 패션/뷰티
     '패션', 'fashion', '뷰티', 'beauty', '화장품', 'cosmetic',
     '의류', 'clothing', '쇼핑', 'shopping',
+    # 군사/방산 (게임과 무관)
+    '자주포', '전차', '미사일', '무기', '군수', '방산', '국방',
+    'K9', 'K2', '한화에어로', '한화디펜스', 'defense contract',
+    'military contract', 'arms deal', '방위사업',
+    # 정치/외교 (게임 무관)
+    '대통령', '국회', '외교부', '장관', '정상회담', 'summit',
+    '조약', 'treaty', '협정',
+    # 스포츠 (e스포츠 제외)
+    '축구', '야구', '농구', '배구', '올림픽', 'FIFA', 'NBA', 'MLB',
+    '프로축구', '프로야구',
     # 기타 비관련
     '부동산', 'real estate', '날씨', 'weather forecast',
     '맛집', 'restaurant', '여행', 'travel tip'
