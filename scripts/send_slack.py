@@ -263,7 +263,7 @@ def create_slack_message(traffic_news, gaming_news):
             "type": "section",
             "text": {
                 "type": "mrkdwn",
-                "text": f"*📈 24시간 뉴스 수집 현황*\n• ⚡ 트래픽 영향: *{len(traffic_news)}건* (관련 이슈: *{len(relevant_news)}건*)\n• 🎮 게임 뉴스: *{len(gaming_news)}건*"
+                "text": f"*📈 24시간 뉴스 수집 현황*\n• ⚡ 트래픽 영향: *{len(traffic_news)}건* 수집 → 주요 이슈 *{len(relevant_news)}건*\n• 🎮 게임 뉴스: *{len(gaming_news)}건*"
             }
         },
         {"type": "divider"},
