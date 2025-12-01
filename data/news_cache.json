@@ -166,5 +166,35 @@
     "category_group": null,
     "traffic_impact": null,
     "api_source": null
+  },
+  "2717254548a4012a": {
+    "category": "disaster",
+    "category_group": null,
+    "traffic_impact": null,
+    "api_source": "naver"
+  },
+  "14fa3d9f75afa941": {
+    "category": "disaster",
+    "category_group": null,
+    "traffic_impact": null,
+    "api_source": "naver"
+  },
+  "8cdeb0adcee5ca9f": {
+    "category": "disaster",
+    "category_group": null,
+    "traffic_impact": null,
+    "api_source": "naver"
+  },
+  "a21a5fea12b624f6": {
+    "category": "gaming",
+    "category_group": null,
+    "traffic_impact": null,
+    "api_source": null
+  },
+  "cc0d3c985fe209fe": {
+    "category": "gaming",
+    "category_group": null,
+    "traffic_impact": null,
+    "api_source": null
   }
 }

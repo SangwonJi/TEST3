@@ -258,14 +258,77 @@ JSON 배열만 응답하세요:
 
 
 # ============================================================
-# 네이버 검색 API (국내 뉴스)
+# 네이버 검색 API (국내 뉴스) - 엄격한 필터링 적용
 # ============================================================
+
+# 광고/마케팅/관련없는 뉴스 제외 키워드
+NEGATIVE_KEYWORDS = [
+    # 마케팅/광고
+    '캠페인', '프로모션', '이벤트', '출시', '신제품', '할인', '세일', '팝업', '콜라보',
+    'campaign', 'promotion', 'launch', 'sale', 'popup', 'collaboration',
+    # 연예/엔터
+    '걸그룹', '보이그룹', '아이돌', '콘서트', '앨범', '뮤직비디오', '팬미팅',
+    # 음식/브랜드
+    '던킨', '스타벅스', '맥도날드', '버거킹', '엠앤엠', '초콜릿', '커피',
+    # 기타 비관련
+    '패션', '뷰티', '화장품', '의류', '쇼핑'
+]
+
+# 게임 관련 필수 키워드 (이 중 하나는 있어야 게임 뉴스)
+GAMING_REQUIRED_KEYWORDS = [
+    'pubg', '펍지', '배틀그라운드', '크래프톤', 'krafton', 'bgmi',
+    '프리파이어', 'free fire', '콜오브듀티', 'call of duty', 'cod mobile',
+    '모바일 게임', 'mobile game', '게임 업데이트', '게임 패치',
+    'esports', 'e스포츠', '이스포츠', '게임 대회', 'pmgc', 'pmpl',
+    '넥슨', '넷마블', 'nexon', 'netmarble', '게임사', '게임 회사'
+]
+
+# 트래픽 영향 필수 키워드 (실제 영향을 주는 이벤트만)
+TRAFFIC_IMPACT_KEYWORDS = {
+    'disaster': ['지진 발생', '지진 피해', '태풍 상륙', '태풍 피해', '홍수 피해', '폭우 피해',
+                 'earthquake hit', 'typhoon damage', 'flood damage'],
+    'conflict': ['전쟁 발발', '군사 충돌', '폭탄 테러', '무력 충돌', '미사일 공격',
+                 'war outbreak', 'military conflict', 'bombing', 'missile attack'],
+    'outage': ['인터넷 차단', '통신 장애', '정전 사태', '서비스 장애', '접속 장애',
+               'internet shutdown', 'network outage', 'power outage', 'service down'],
+    'holiday': ['국경일', '공휴일 지정', '연휴 시작', '명절 연휴', '휴일 확정',
+                'national holiday', 'public holiday announced', 'holiday begins']
+}
+
+def is_relevant_news(title: str, description: str) -> tuple:
+    """
+    뉴스의 관련성을 판단하고 카테고리를 반환
+    Returns: (is_relevant, news_type, category, priority)
+    """
+    text = f"{title} {description}".lower()
+    
+    # 1. 네거티브 키워드 체크 - 광고/마케팅 제외
+    for neg_kw in NEGATIVE_KEYWORDS:
+        if neg_kw.lower() in text:
+            return (False, None, None, None)
+    
+    # 2. 게임 뉴스 체크 (명확한 게임 키워드 필수)
+    for game_kw in GAMING_REQUIRED_KEYWORDS:
+        if game_kw.lower() in text:
+            return (True, 'gaming', 'gaming', 'medium')
+    
+    # 3. 트래픽 영향 뉴스 체크 (구체적인 이벤트 키워드 필수)
+    for category, keywords in TRAFFIC_IMPACT_KEYWORDS.items():
+        for kw in keywords:
+            if kw.lower() in text:
+                priority = 'high' if category in ['disaster', 'conflict', 'outage'] else 'medium'
+                return (True, 'traffic_impact', category, priority)
+    
+    # 4. 어디에도 해당 안 됨 - 제외
+    return (False, None, None, None)
+
 
 def fetch_from_naver(keywords: List[str], max_results: int = 50) -> List[Dict]:
     """
-    네이버 검색 API로 국내 뉴스 검색
+    네이버 검색 API로 국내 뉴스 검색 (엄격한 필터링)
     - 일 25,000회 무료
     - 국내 300+ 언론사 커버
+    - 관련 없는 뉴스 자동 제외
     
     API 발급: https://developers.naver.com/
     """
@@ -281,11 +344,10 @@ def fetch_from_naver(keywords: List[str], max_results: int = 50) -> List[Dict]:
         import urllib.parse
         
         results = []
+        filtered_count = 0
         
         for keyword in keywords[:15]:  # 최대 15개 키워드
             try:
-                encoded_keyword = urllib.parse.quote(keyword)
-                
                 response = requests.get(
                     f"https://openapi.naver.com/v1/search/news.json",
                     params={
@@ -309,6 +371,13 @@ def fetch_from_naver(keywords: List[str], max_results: int = 50) -> List[Dict]:
                         title = item.get('title', '').replace('<b>', '').replace('</b>', '')
                         description = item.get('description', '').replace('<b>', '').replace('</b>', '')
                         
+                        # 관련성 검사 (엄격한 필터링)
+                        is_relevant, news_type, category, priority = is_relevant_news(title, description)
+                        
+                        if not is_relevant:
+                            filtered_count += 1
+                            continue  # 관련 없는 뉴스 제외
+                        
                         # 날짜 파싱 (RFC 2822 형식)
                         pub_date = item.get('pubDate', '')
                         try:
@@ -326,32 +395,15 @@ def fetch_from_naver(keywords: List[str], max_results: int = 50) -> List[Dict]:
                             'summary': description[:500],
                             'url': item.get('originallink') or item.get('link', ''),
                             'source': '네이버 뉴스',
-                            'category': 'gaming',  # 기본값
-                            'news_type': 'gaming',
-                            'priority': 'medium',
+                            'category': category,
+                            'news_type': news_type,
+                            'priority': priority,
                             'api_source': 'naver'
                         }
                         
-                        # 카테고리 추론
-                        text = f"{title} {description}".lower()
-                        if any(k in text for k in ['지진', 'earthquake', '홍수', 'flood', '태풍']):
-                            news_item['category'] = 'natural_disaster'
-                            news_item['news_type'] = 'traffic_impact'
-                            news_item['priority'] = 'high'
-                        elif any(k in text for k in ['전쟁', 'war', '폭발', 'explosion', '테러']):
-                            news_item['category'] = 'war_conflict'
-                            news_item['news_type'] = 'traffic_impact'
-                            news_item['priority'] = 'high'
-                        elif any(k in text for k in ['공휴일', '명절', '휴일', 'holiday']):
-                            news_item['category'] = 'holiday'
-                            news_item['news_type'] = 'traffic_impact'
-                        elif any(k in text for k in ['pubg', '펍지', '배틀그라운드', '크래프톤', 'krafton']):
-                            news_item['category'] = 'gaming'
-                            news_item['news_type'] = 'gaming'
-                        
                         results.append(news_item)
                     
-                    logger.info(f"네이버 '{keyword}': {len(items)}개 수집")
+                    logger.info(f"네이버 '{keyword}': {len(items)}개 중 관련 뉴스만 수집")
                 else:
                     logger.warning(f"네이버 API 오류: {response.status_code} - {response.text[:100]}")
                 
@@ -369,7 +421,7 @@ def fetch_from_naver(keywords: List[str], max_results: int = 50) -> List[Dict]:
                 seen_urls.add(item['url'])
                 unique_results.append(item)
         
-        logger.info(f"네이버 총 수집: {len(unique_results)}개")
+        logger.info(f"네이버 총 수집: {len(unique_results)}개 (필터링 제외: {filtered_count}개)")
         return unique_results[:max_results]
         
     except Exception as e:
@@ -640,24 +692,63 @@ HIGH_PRIORITY_KEYWORDS = {
     ]
 }
 
-# MEDIUM Priority 키워드 (규칙 기반 자동 분류)
+# MEDIUM Priority 키워드 (규칙 기반 자동 분류) - 더 엄격한 게임 키워드
 MEDIUM_RULES = {
-    'gaming': ['PUBG', 'Krafton', 'mobile game', 'esports', 'e-sports', 'tournament', 'season', 'update'],
-    'holiday': ['holiday', 'festival', 'Eid', 'Christmas', 'New Year', 'Ramadan', 'Diwali'],
-    'school': ['school', 'exam', 'vacation', 'semester', 'break', 'academic']
+    'gaming': [
+        # PUBG/Krafton 관련 (필수)
+        'PUBG', 'pubg mobile', 'battlegrounds mobile', 'Krafton', 'BGMI',
+        'PMGC', 'PMPL', 'pubg esports',
+        # 경쟁작
+        'Free Fire', 'Call of Duty Mobile', 'COD Mobile',
+        # 게임 업계 (구체적인 키워드만)
+        'mobile game revenue', 'mobile game update', 'game patch',
+        'esports tournament', 'e-sports championship',
+        # 한국어
+        '펍지', '배틀그라운드', '크래프톤', '모바일게임 매출', '게임 업데이트'
+    ],
+    'holiday': [
+        # 실제 공휴일만 (마케팅 제외)
+        'national holiday', 'public holiday', 'bank holiday',
+        'Eid al-Fitr', 'Eid al-Adha', 'Christmas Day', 'New Year Day',
+        'Ramadan begins', 'Diwali celebration',
+        '국경일', '공휴일', '명절 연휴', '추석', '설날'
+    ],
+    'school': [
+        # 학사일정
+        'school holiday', 'school vacation', 'exam period', 'semester break',
+        'summer vacation', 'winter vacation',
+        '방학 시작', '시험 기간', '개학'
+    ]
 }
 
-# LOW Priority (제외할 패턴)
+# LOW Priority (제외할 패턴) - 확장된 네거티브 키워드
 EXCLUDE_PATTERNS = [
-    '광고', 'sponsored', 'affiliate', 'promotion',
-    '주식', 'stock price', 'earnings', 'investor',
-    '채용', 'hiring', 'job opening', 'career'
+    # 광고/마케팅
+    '광고', 'sponsored', 'affiliate', 'promotion', '프로모션',
+    '캠페인', 'campaign', '이벤트', '팝업', 'popup', '콜라보', 'collaboration',
+    '출시', 'launch', '신제품', '할인', 'sale', '세일',
+    # 금융/투자
+    '주식', 'stock price', 'earnings', 'investor', '투자', '배당',
+    # 채용
+    '채용', 'hiring', 'job opening', 'career', '구인',
+    # 연예/엔터테인먼트
+    '걸그룹', '보이그룹', '아이돌', 'idol', '콘서트', 'concert',
+    '앨범', 'album', '뮤직비디오', '팬미팅', 'fan meeting',
+    # 음식/브랜드 (게임과 무관)
+    '던킨', '스타벅스', '맥도날드', '버거킹', '엠앤엠', 'M&M',
+    '초콜릿', '커피', 'coffee', '음료',
+    # 패션/뷰티
+    '패션', 'fashion', '뷰티', 'beauty', '화장품', 'cosmetic',
+    '의류', 'clothing', '쇼핑', 'shopping',
+    # 기타 비관련
+    '부동산', 'real estate', '날씨', 'weather forecast',
+    '맛집', 'restaurant', '여행', 'travel tip'
 ]
 
 
 def classify_news_priority(title: str, summary: str) -> tuple:
     """
-    뉴스의 우선순위를 분류
+    뉴스의 우선순위를 분류 (엄격한 기준)
     
     Args:
         title: 뉴스 제목
@@ -671,12 +762,12 @@ def classify_news_priority(title: str, summary: str) -> tuple:
     """
     text = f"{title} {summary}".lower()
     
-    # LOW Priority 체크 (제외)
+    # 1. LOW Priority 체크 (제외) - 광고/마케팅/비관련 뉴스
     for pattern in EXCLUDE_PATTERNS:
         if pattern.lower() in text:
             return ('low', None, None)
     
-    # HIGH Priority 체크 (트래픽 영향 뉴스 - AI 정제 대상)
+    # 2. HIGH Priority 체크 (트래픽 영향 뉴스 - AI 정제 대상)
     for keyword in HIGH_PRIORITY_KEYWORDS['critical']:
         if keyword.lower() in text:
             return ('high', 'traffic_impact', None)
@@ -688,7 +779,7 @@ def classify_news_priority(title: str, summary: str) -> tuple:
                 if keyword.lower() in text:
                     return ('high', 'traffic_impact', None)
     
-    # MEDIUM Priority 체크 (규칙 기반 자동 분류)
+    # 3. MEDIUM Priority 체크 (규칙 기반 자동 분류)
     for category, keywords in MEDIUM_RULES.items():
         for keyword in keywords:
             if keyword.lower() in text:
@@ -699,8 +790,10 @@ def classify_news_priority(title: str, summary: str) -> tuple:
                 elif category == 'school':
                     return ('medium', 'traffic_impact', 'school_calendar')
     
-    # 기본값: MEDIUM, gaming
-    return ('medium', 'gaming', 'gaming')
+    # 4. 기본값: LOW (관련 없으면 제외!)
+    # 이전: ('medium', 'gaming', 'gaming') - 모든 뉴스가 게임으로 분류됨
+    # 수정: ('low', None, None) - 관련 없는 뉴스는 제외
+    return ('low', None, None)
 
 
 def clean_html_tags(text: str) -> str:
