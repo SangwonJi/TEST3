@@ -19,6 +19,10 @@ EXCLUDE_KEYWORDS = [
     'K-pop', 'idol', '아이돌',
     # 일반 시위 (인터넷 차단 없으면 무관)
     'PROTEST', 'protest', 'immigration protest', 'hindu protest',
+    # 야구/스포츠 (WAR는 야구 통계 용어)
+    '구원투수', '스토브리그', 'WAR 전체', '지명', 'KT', 'xportsnews',
+    # 반도체/경제 (Chip War는 반도체 경쟁)
+    'Chip War', 'SK하이닉스', '반도체', 'AI 거품론',
     # 광고/마케팅
     '캠페인', 'campaign', '프로모션', 'promotion', '팝업', 'popup',
     '콜라보', 'collaboration', '신제품',
