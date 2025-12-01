@@ -1875,16 +1875,11 @@
       
       summaryHTML += `</div></div>`;
       
-      // 최신 주요 뉴스 3개 (광고/마케팅 제외)
-      const excludeKeywords = ['던킨', '캘리포니아피자', '스타벅스', '맥도날드', '캠페인', 'campaign', '프로모션', 'promotion', 'DMZ', '한화에어로', '자주포'];
-      const filteredNews = trafficNews.filter(news => {
-        const text = (news.title || '').toLowerCase();
-        return !excludeKeywords.some(kw => text.toLowerCase().includes(kw.toLowerCase()));
-      });
+      // 최신 주요 뉴스 3개 (이미 위에서 필터링됨)
       
       summaryHTML += `<div>`;
       summaryHTML += `<div style="font-weight:700;color:#ffa502;margin-bottom:8px">📌 최신 주요 뉴스</div>`;
-      const recentNews = filteredNews.sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 3);
+      const recentNews = trafficNews.sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 3);
       
       if(recentNews.length === 0){
         summaryHTML += `<div style="padding:8px 0;color:var(--muted);font-size:13px">최근 주요 뉴스가 없습니다.</div>`;
