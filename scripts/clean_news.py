@@ -13,6 +13,7 @@ EXCLUDE_KEYWORDS = [
     '자주포', '전차', '미사일', '무기', '군수', '방산', '국방',
     'K9', 'K2', '한화에어로', '한화디펜스', 'defense contract',
     '방위사업', 'military contract', 'arms deal',
+    'DMZ', 'Korean War soldiers', '유해 발굴', '전사자',
     # 광고/마케팅
     '캠페인', 'campaign', '프로모션', 'promotion', '팝업', 'popup',
     '콜라보', 'collaboration', '신제품',
