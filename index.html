@@ -82,17 +82,17 @@
     .detail-stat-value{font-size:24px;font-weight:700;color:#fff}
     .traffic-chart-container{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:16px;margin-top:20px;min-height:400px}
     .news-container{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:24px}
-    .news-item{display:flex;gap:16px;padding:16px;border-bottom:1px solid var(--border);transition:background 0.2s}
+    .news-item{display:flex;gap:16px;padding:20px;border-bottom:1px solid var(--border);transition:background 0.2s}
     .news-item:hover{background:rgba(255,255,255,0.05)}
     .news-item:last-child{border-bottom:none}
     .news-content{flex:1}
-    .news-title{font-size:16px;font-weight:600;color:#fff;margin-bottom:8px}
+    .news-title{font-size:17px;font-weight:600;color:#fff;margin-bottom:10px;line-height:1.4}
     .news-title a{color:#fff;text-decoration:none}
     .news-title a:hover{color:#238636}
-    .news-meta{font-size:12px;color:var(--muted);display:flex;gap:12px;align-items:center}
+    .news-meta{font-size:13px;color:var(--muted);display:flex;gap:12px;align-items:center}
     .news-source{color:#238636;font-weight:600}
     .news-date{color:var(--muted)}
-    .news-snippet{font-size:14px;color:var(--muted);margin-top:8px;line-height:1.5}
+    .news-snippet{font-size:15px;color:var(--muted);margin-top:10px;line-height:1.6}
     .empty-state{text-align:center;padding:60px 20px;color:var(--muted)}
     .empty-state-icon{font-size:48px;margin-bottom:16px;opacity:0.5}
     @media (max-width:768px){.header{padding:14px 16px}.content{padding:12px 16px}.filter-controls{padding:14px 16px}.tabs-container{padding:0 16px}.risers-fallers-grid{grid-template-columns:1fr}.tabs{overflow-x:auto}.tab-button{padding:12px 16px;font-size:13px}}
@@ -2320,11 +2320,11 @@
                 ${typeLabel}
                 <a href="${news.url}" target="_blank" rel="noopener noreferrer" style="flex:1;min-width:200px">${news.title}</a>
               </div>
-              <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
-                <span style="padding:3px 8px;background:${groupColor}15;border:1px solid ${groupColor}50;border-radius:4px;font-size:10px;color:${groupColor}">
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+                <span style="padding:4px 10px;background:${groupColor}15;border:1px solid ${groupColor}50;border-radius:4px;font-size:11px;color:${groupColor}">
                   ${categoryIcon} ${categoryName}
                 </span>
-                ${news.country ? `<span style="padding:3px 8px;background:rgba(35,134,54,0.1);border:1px solid rgba(35,134,54,0.3);border-radius:4px;font-size:10px;color:#238636">🌍 ${news.country}</span>` : ''}
+                ${news.country ? `<span style="padding:4px 10px;background:rgba(35,134,54,0.1);border:1px solid rgba(35,134,54,0.3);border-radius:4px;font-size:11px;color:#238636">🌍 ${news.country}</span>` : ''}
                 ${news.priority === 'high' ? `<span style="padding:3px 8px;background:rgba(255,107,107,0.15);border:1px solid rgba(255,107,107,0.3);border-radius:4px;font-size:10px;color:#ff6b6b">⚠️ HIGH</span>` : ''}
               </div>
               <div class="news-meta" style="margin-top:8px">
