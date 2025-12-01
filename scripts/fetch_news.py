@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-뉴스 수집 스크립트
-Google News RSS를 사용하여 PUBG Mobile 관련 뉴스를 수집하고 CSV로 저장합니다.
+뉴스 수집 스크립트 (최적화 버전)
+- RSS 수집 → 스마트 필터링 → 단계별 AI 정제
+- 무료 API (Gemini, Groq) + 유료 API (OpenAI, Claude) 조합
 """
 
 import os
@@ -12,9 +13,10 @@ import feedparser
 import pandas as pd
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 import time
 import logging
+import hashlib
 
 # 로깅 설정
 logging.basicConfig(
@@ -29,6 +31,7 @@ DATA_DIR = PROJECT_ROOT / 'data'
 SCRIPTS_DIR = PROJECT_ROOT / 'scripts'
 KEYWORDS_FILE = SCRIPTS_DIR / 'keywords.json'
 NEWS_CSV = DATA_DIR / 'news.csv'
+CACHE_FILE = DATA_DIR / 'news_cache.json'
 
 # 환경 변수 로드 (로컬 개발 환경)
 try:
@@ -37,6 +40,22 @@ try:
     logger.info("로컬 환경: .env 파일에서 환경 변수 로드")
 except ImportError:
     logger.info("GitHub Actions 환경: os.getenv 사용")
+
+
+# ============================================================
+# API 우선순위 및 비용 설정
+# ============================================================
+API_PRIORITY = {
+    'free': ['groq', 'gemini'],  # 무료 API 우선
+    'paid': ['openai', 'claude']  # 유료 API는 선택적
+}
+
+API_COSTS = {
+    'groq': 0,       # 무료
+    'gemini': 0,     # 무료 티어
+    'openai': 0.0001,  # GPT-4o-mini per request
+    'claude': 0.003    # Claude per request
+}
 
 
 def load_keywords() -> Dict:
@@ -112,6 +131,313 @@ def map_to_group_category(detail_category: str) -> str:
         return 'gaming_competitor'
     else:
         return 'other'
+
+
+# ============================================================
+# 캐싱 시스템
+# ============================================================
+
+def get_cache_key(text: str) -> str:
+    """텍스트에서 캐시 키 생성"""
+    return hashlib.md5(text.encode()).hexdigest()[:16]
+
+
+def load_cache() -> Dict:
+    """캐시 파일 로드"""
+    try:
+        if CACHE_FILE.exists():
+            with open(CACHE_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+    except Exception as e:
+        logger.warning(f"캐시 로드 실패: {e}")
+    return {}
+
+
+def save_cache(cache: Dict):
+    """캐시 파일 저장"""
+    try:
+        DATA_DIR.mkdir(exist_ok=True)
+        with open(CACHE_FILE, 'w', encoding='utf-8') as f:
+            json.dump(cache, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        logger.warning(f"캐시 저장 실패: {e}")
+
+
+# ============================================================
+# 무료 API: Groq (Llama 3.1)
+# ============================================================
+
+def fetch_from_groq(news_items: List[Dict], batch_size: int = 5) -> List[Dict]:
+    """
+    Groq API로 뉴스 배치 분석 (무료, 초고속)
+    - Llama 3.1 70B 사용
+    - 분당 30회, 일 14,400회 무료
+    
+    API 키 발급: https://console.groq.com/
+    """
+    api_key = os.getenv('GROQ_API_KEY')
+    if not api_key:
+        logger.info("GROQ_API_KEY 없음 - Groq 스킵")
+        return news_items
+    
+    try:
+        import requests
+        
+        results = []
+        for i in range(0, len(news_items), batch_size):
+            batch = news_items[i:i+batch_size]
+            
+            # 배치 프롬프트 생성
+            news_text = "\n".join([
+                f"{j+1}. 제목: {item.get('title', '')}\n   요약: {item.get('summary', '')[:200]}"
+                for j, item in enumerate(batch)
+            ])
+            
+            prompt = f"""다음 {len(batch)}개 뉴스를 분석해주세요. 각 뉴스에 대해 JSON 배열로 응답해주세요.
+
+{news_text}
+
+각 뉴스에 대해:
+- category: 카테고리 (gaming, holiday, war_conflict, natural_disaster, internet_shutdown, protest_strike, economic, other 중 하나)
+- traffic_impact: 모바일 게임 트래픽에 미치는 영향 (한국어로 1-2문장)
+- relevant: 관련성 (true/false)
+
+JSON 배열만 응답하세요:
+[{{"id": 1, "category": "...", "traffic_impact": "...", "relevant": true}}, ...]"""
+
+            response = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": "llama-3.1-70b-versatile",
+                    "messages": [
+                        {"role": "system", "content": "You are a news analyst. Return only valid JSON array."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    "temperature": 0.3,
+                    "max_tokens": 1000
+                },
+                timeout=30
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                content = data['choices'][0]['message']['content']
+                
+                # JSON 추출
+                import re
+                json_match = re.search(r'\[[\s\S]*\]', content)
+                if json_match:
+                    analysis = json.loads(json_match.group())
+                    
+                    for j, item in enumerate(batch):
+                        if j < len(analysis):
+                            item['category'] = analysis[j].get('category', item.get('category', 'other'))
+                            item['traffic_impact'] = analysis[j].get('traffic_impact', '')
+                            item['api_source'] = 'groq'
+                            if not analysis[j].get('relevant', True):
+                                item['skip'] = True
+                        results.append(item)
+                else:
+                    results.extend(batch)
+            else:
+                logger.warning(f"Groq API 오류: {response.status_code}")
+                results.extend(batch)
+            
+            time.sleep(0.5)  # Rate limit 방지
+        
+        logger.info(f"Groq 분석 완료: {len(results)}개")
+        return results
+        
+    except Exception as e:
+        logger.error(f"Groq API 호출 실패: {e}")
+        return news_items
+
+
+# ============================================================
+# 무료 API: Google Gemini
+# ============================================================
+
+def fetch_from_gemini(news_items: List[Dict], batch_size: int = 5) -> List[Dict]:
+    """
+    Google Gemini API로 뉴스 분석 (무료 티어)
+    - Gemini 1.5 Flash 사용
+    - 분당 15회, 일 1,500회 무료
+    
+    API 키 발급: https://aistudio.google.com/
+    """
+    api_key = os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')
+    if not api_key:
+        logger.info("GEMINI_API_KEY 없음 - Gemini 스킵")
+        return news_items
+    
+    try:
+        import requests
+        
+        results = []
+        for i in range(0, len(news_items), batch_size):
+            batch = news_items[i:i+batch_size]
+            
+            news_text = "\n".join([
+                f"{j+1}. 제목: {item.get('title', '')}\n   내용: {item.get('summary', '')[:200]}"
+                for j, item in enumerate(batch)
+            ])
+            
+            prompt = f"""다음 {len(batch)}개 뉴스를 분석하고 JSON 배열로 응답해주세요.
+
+{news_text}
+
+각 뉴스에 대해:
+- category: 세부 카테고리 (internet_shutdown, war_conflict, natural_disaster, holiday, gaming, protest_strike, economic, other)
+- summary_kr: 한국어 2줄 요약
+- traffic_impact: 모바일 게임 트래픽 영향 분석
+- country: 관련 국가 (없으면 null)
+
+JSON 배열만 응답:
+[{{"id": 1, "category": "...", "summary_kr": "...", "traffic_impact": "...", "country": "..."}}, ...]"""
+
+            response = requests.post(
+                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}",
+                headers={"Content-Type": "application/json"},
+                json={
+                    "contents": [{"parts": [{"text": prompt}]}],
+                    "generationConfig": {
+                        "temperature": 0.3,
+                        "maxOutputTokens": 1500
+                    }
+                },
+                timeout=30
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                content = data.get('candidates', [{}])[0].get('content', {}).get('parts', [{}])[0].get('text', '')
+                
+                import re
+                json_match = re.search(r'\[[\s\S]*\]', content)
+                if json_match:
+                    analysis = json.loads(json_match.group())
+                    
+                    for j, item in enumerate(batch):
+                        if j < len(analysis):
+                            a = analysis[j]
+                            item['category'] = a.get('category', item.get('category', 'other'))
+                            item['summary'] = a.get('summary_kr', item.get('summary', ''))
+                            item['traffic_impact'] = a.get('traffic_impact', '')
+                            if a.get('country'):
+                                item['country'] = a.get('country')
+                            item['api_source'] = 'gemini'
+                        results.append(item)
+                else:
+                    results.extend(batch)
+            else:
+                logger.warning(f"Gemini API 오류: {response.status_code} - {response.text[:200]}")
+                results.extend(batch)
+            
+            time.sleep(1)  # Rate limit 방지 (분당 15회)
+        
+        logger.info(f"Gemini 분석 완료: {len(results)}개")
+        return results
+        
+    except Exception as e:
+        logger.error(f"Gemini API 호출 실패: {e}")
+        return news_items
+
+
+# ============================================================
+# 단계별 AI 정제 (최적화)
+# ============================================================
+
+def smart_refine_batch(news_items: List[Dict], use_paid_api: bool = False) -> List[Dict]:
+    """
+    스마트 배치 정제
+    1단계: Groq (무료, 빠름) - 기본 분류
+    2단계: Gemini (무료) - 심층 분석 (HIGH priority만)
+    3단계: OpenAI/Claude (유료, 선택적) - 최종 검증
+    """
+    if not news_items:
+        return []
+    
+    logger.info(f"스마트 정제 시작: {len(news_items)}개")
+    
+    # 캐시 로드
+    cache = load_cache()
+    cached_count = 0
+    to_process = []
+    
+    for item in news_items:
+        cache_key = get_cache_key(item.get('title', '') + item.get('url', ''))
+        if cache_key in cache:
+            # 캐시에서 결과 복원
+            cached = cache[cache_key]
+            item.update(cached)
+            cached_count += 1
+        else:
+            to_process.append(item)
+    
+    if cached_count > 0:
+        logger.info(f"캐시에서 {cached_count}개 복원")
+    
+    if not to_process:
+        return news_items
+    
+    # 1단계: Groq으로 빠른 분류 (무료)
+    groq_key = os.getenv('GROQ_API_KEY')
+    if groq_key:
+        logger.info("1단계: Groq으로 빠른 분류...")
+        to_process = fetch_from_groq(to_process)
+    
+    # 2단계: HIGH priority만 Gemini로 심층 분석 (무료)
+    high_priority = [n for n in to_process if n.get('priority') == 'high']
+    gemini_key = os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')
+    
+    if gemini_key and high_priority:
+        logger.info(f"2단계: Gemini로 심층 분석 ({len(high_priority)}개 HIGH priority)...")
+        refined_high = fetch_from_gemini(high_priority)
+        
+        # 결과 병합
+        high_urls = {n['url'] for n in high_priority}
+        to_process = [n for n in to_process if n['url'] not in high_urls] + refined_high
+    
+    # 3단계: 유료 API (선택적, 최상위 10개만)
+    if use_paid_api:
+        openai_key = os.getenv('OPENAI_API_KEY')
+        claude_key = os.getenv('CLAUDE_API_KEY') or os.getenv('ANTHROPIC_API_KEY')
+        
+        if openai_key or claude_key:
+            # 가장 중요한 10개만 유료 API로 검증
+            top_news = sorted(to_process, key=lambda x: x.get('priority', 'medium') == 'high', reverse=True)[:10]
+            logger.info(f"3단계: 유료 API로 최종 검증 ({len(top_news)}개)...")
+            
+            for item in top_news:
+                if openai_key:
+                    refined = refine_news_with_ai(item, 'openai')
+                    if refined:
+                        item.update(refined)
+                        item['api_source'] = 'openai'
+    
+    # 캐시 업데이트
+    for item in to_process:
+        cache_key = get_cache_key(item.get('title', '') + item.get('url', ''))
+        cache[cache_key] = {
+            'category': item.get('category'),
+            'category_group': item.get('category_group'),
+            'traffic_impact': item.get('traffic_impact'),
+            'api_source': item.get('api_source')
+        }
+    
+    save_cache(cache)
+    
+    # category_group 매핑
+    for item in news_items:
+        if not item.get('category_group'):
+            item['category_group'] = map_to_group_category(item.get('category', 'other'))
+    
+    logger.info(f"스마트 정제 완료: {len(news_items)}개")
+    return news_items
 
 
 # ============================================================
@@ -1077,66 +1403,41 @@ def main():
         logger.info(f"MEDIUM Priority (규칙 기반): {len(medium_priority_news)}개")
         
         # ============================================================
-        # 4단계: HIGH Priority만 AI 정제
+        # 4단계: 스마트 AI 정제 (무료 API 우선)
         # ============================================================
         logger.info("=" * 50)
-        logger.info("4단계: HIGH Priority 뉴스 AI 정제 중...")
+        logger.info("4단계: 스마트 AI 정제 시작...")
         logger.info("=" * 50)
         
-        # API 타입 결정
-        api_type = os.getenv('NEWS_API_TYPE', 'openai').lower()
-        if api_type not in ['openai', 'claude']:
-            api_type = 'openai'
+        # 사용 가능한 API 확인
+        available_apis = []
+        if os.getenv('GROQ_API_KEY'):
+            available_apis.append('Groq (무료)')
+        if os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY'):
+            available_apis.append('Gemini (무료)')
+        if os.getenv('OPENAI_API_KEY'):
+            available_apis.append('OpenAI (유료)')
+        if os.getenv('CLAUDE_API_KEY') or os.getenv('ANTHROPIC_API_KEY'):
+            available_apis.append('Claude (유료)')
         
-        # API 키 확인
-        has_api_key = bool(os.getenv('OPENAI_API_KEY') or os.getenv('CLAUDE_API_KEY') or os.getenv('ANTHROPIC_API_KEY'))
-        
-        all_refined_news = []
-        skipped_count = 0
-        
-        if has_api_key and high_priority_news:
-            logger.info(f"사용할 AI API: {api_type.upper()}")
-            
-            # HIGH Priority만 AI 정제 (최대 50개)
-            max_refine_count = 50
-            news_to_refine = high_priority_news[:max_refine_count]
-            
-            if len(high_priority_news) > max_refine_count:
-                logger.warning(f"HIGH Priority가 {len(high_priority_news)}개로 많습니다. 최신 {max_refine_count}개만 정제합니다.")
-            
-            for i, news_item in enumerate(news_to_refine, 1):
-                if i % 10 == 0:
-                    logger.info(f"정제 진행 중: {i}/{len(news_to_refine)}")
-                
-                refined = refine_news_with_ai(news_item, api_type)
-                
-                if refined is None:
-                    skipped_count += 1
-                else:
-                    all_refined_news.append(refined)
-                
-                time.sleep(1)  # API Rate Limit 방지
-            
-            # 정제하지 않은 HIGH Priority 뉴스 추가
-            if len(high_priority_news) > max_refine_count:
-                remaining_high = high_priority_news[max_refine_count:]
-                for item in remaining_high:
-                    if not item.get('category_group'):
-                        item['category_group'] = map_to_group_category(item.get('category', 'other'))
-                all_refined_news.extend(remaining_high)
-            
-            logger.info(f"AI 정제 완료: {len(all_refined_news)}개 (스킵: {skipped_count}개)")
+        if available_apis:
+            logger.info(f"사용 가능한 API: {', '.join(available_apis)}")
         else:
-            if not has_api_key:
-                logger.info("API 키 없음 - HIGH Priority도 규칙 기반 분류")
-            
-            # API 키 없으면 규칙 기반으로 처리
-            for item in high_priority_news:
-                if not item.get('category_group'):
-                    item['category_group'] = map_to_group_category(item.get('category', 'other'))
-            all_refined_news.extend(high_priority_news)
+            logger.info("API 키 없음 - 규칙 기반 분류만 사용")
         
-        # MEDIUM Priority 뉴스 추가
+        # 유료 API 사용 여부 (환경 변수로 제어)
+        use_paid = os.getenv('USE_PAID_API', 'false').lower() == 'true'
+        
+        # 스마트 정제 실행 (HIGH Priority만)
+        all_refined_news = smart_refine_batch(high_priority_news, use_paid_api=use_paid)
+        
+        # skip 표시된 뉴스 제거
+        all_refined_news = [n for n in all_refined_news if not n.get('skip')]
+        
+        # MEDIUM Priority 뉴스 추가 (규칙 기반 분류)
+        for item in medium_priority_news:
+            if not item.get('category_group'):
+                item['category_group'] = map_to_group_category(item.get('category', 'gaming'))
         all_refined_news.extend(medium_priority_news)
         
         logger.info(f"총 처리된 뉴스: {len(all_refined_news)}개")
