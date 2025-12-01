@@ -1,0 +1,36 @@
+{
+  "generated_at": "2025-12-01T17:47:10.896423",
+  "news_count": 5,
+  "has_issues": true,
+  "summary": "**핵심 영향**\n인도네시아, 태국, 스리랑카에서 발생한 홍수와 산사태로 인해 사망자 1천 명 가까이가 발생했습니다. 이는 해당 지역의 인프라와 통신망에 영향을 미칠 수 있어 모바일 게임 트래픽에도 영향을 줄 수 있습니다. 특히, 통신망의 장애로 인해 게임 서버에 접속이 어려워질 수 있습니다.\n\n**국가별 예상 영향**\n* 인도네시아: 모바일 게임 트래픽이 감소할 수 있으며, 게임 서버 접속에 어려움이 발생할 수 있습니다.\n* 태국: 통신망의 장애로 인해 모바일 게임 이용에 불편이 발생할 수 있습니다.\n* 스리랑카: 홍수와 산사태로 인해 모바일 게임 트래픽이 감소하고, 게임 이용에 제약이 있을 수 있습니다.",
+  "affected_countries": [
+    "Indonesia"
+  ],
+  "key_issues": [
+    {
+      "title": "‘Floods·Landslides’ Leave the Death Toll in Indonesia, Thailand, and Sri Lanka A",
+      "country": "Indonesia",
+      "category": "gaming"
+    },
+    {
+      "title": "North Korean APT Attacks Reach 86 in a Year as South Korea Enters the Age of AI-",
+      "country": "",
+      "category": "gaming"
+    },
+    {
+      "title": "‘Spike War’ Shin Seong, can he handle Kim Yo-han’s serve? Crowned ‘receive log’ ",
+      "country": "",
+      "category": "gaming"
+    },
+    {
+      "title": "[현장영상] ‘홍수·산사태’ 인도네시아·태국·스리랑카 사망자 1천 명 가까이 발생 - v.daum.net",
+      "country": "Indonesia",
+      "category": "gaming"
+    },
+    {
+      "title": "인도네시아·태국·스리랑카 덮친 홍수…사망자 1000명 달해 - 이데일리",
+      "country": "Indonesia",
+      "category": "gaming"
+    }
+  ]
+}

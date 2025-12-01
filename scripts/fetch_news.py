@@ -1859,14 +1859,233 @@ def main():
         if unique_new_news:
             save_to_csv(all_news)
             logger.info(f"✅ {len(unique_new_news)}개의 새 뉴스를 추가했습니다.")
+            
+            # ============================================================
+            # 5단계: AI 요약 생성
+            # ============================================================
+            logger.info("=" * 50)
+            logger.info("5단계: 트래픽 영향 AI 요약 생성...")
+            logger.info("=" * 50)
+            
+            # 최근 24시간 뉴스만 요약 대상
+            now = datetime.now()
+            recent_news = [
+                n for n in all_news 
+                if n.get('published_date') and 
+                (now - datetime.fromisoformat(n['published_date'].replace('Z', '+00:00').replace('+00:00', ''))).days < 1
+            ]
+            
+            if not recent_news:
+                recent_news = all_news[:50]  # fallback
+            
+            generate_traffic_summary(recent_news)
+            
             return 0  # 성공 (변경사항 있음)
         else:
             logger.info("새로운 뉴스가 없습니다.")
+            
+            # 뉴스가 없어도 요약은 갱신
+            logger.info("기존 뉴스로 요약 갱신...")
+            generate_traffic_summary(existing_news[:50] if existing_news else [])
+            
             return 1  # 변경사항 없음
             
     except Exception as e:
         logger.error(f"뉴스 수집 중 오류 발생: {e}", exc_info=True)
         return -1  # 실패
+
+
+def generate_traffic_summary(news_list: List[Dict]) -> Dict:
+    """
+    트래픽 영향 뉴스에 대한 AI 요약 생성
+    - 모바일 게임 트래픽 전문가 관점
+    - Groq API 사용 (무료)
+    """
+    SUMMARY_FILE = DATA_DIR / 'summary.json'
+    
+    # 트래픽 영향 뉴스만 필터링
+    traffic_news = [n for n in news_list if n.get('news_type') == 'traffic_impact']
+    
+    # 제외 키워드 (트래픽과 무관한 뉴스)
+    exclude_keywords = [
+        'mama', 'awards', '시상식', 'concert', '콘서트', 'idol', '아이돌',
+        '광고', '캠페인', '프로모션', '증시', '코스피', '채용', '분양',
+        'immigration protest', 'hindu protest', 'farmer protest'
+    ]
+    
+    # 필터링된 뉴스
+    filtered_news = []
+    seen_titles = set()
+    for news in traffic_news:
+        title = (news.get('title') or '').lower()
+        title_key = title[:30]
+        
+        # 중복 체크
+        if title_key in seen_titles:
+            continue
+        seen_titles.add(title_key)
+        
+        # 제외 키워드 체크
+        if any(kw in title for kw in exclude_keywords):
+            continue
+            
+        filtered_news.append(news)
+    
+    logger.info(f"요약 대상 뉴스: {len(filtered_news)}개 (전체 트래픽 뉴스: {len(traffic_news)}개)")
+    
+    if not filtered_news:
+        summary_data = {
+            'generated_at': datetime.now().isoformat(),
+            'news_count': 0,
+            'has_issues': False,
+            'summary': '✅ 특이사항 없음\n\n최근 24시간 동안 모바일 게임 트래픽에 영향을 줄 만한 주요 이슈가 감지되지 않았습니다.',
+            'affected_countries': [],
+            'key_issues': []
+        }
+        
+        with open(SUMMARY_FILE, 'w', encoding='utf-8') as f:
+            json.dump(summary_data, f, ensure_ascii=False, indent=2)
+        
+        logger.info("요약 생성 완료: 특이사항 없음")
+        return summary_data
+    
+    # 유효한 국가만 추출 (NaN, None, 'Unknown' 제외)
+    def get_valid_countries(news_list):
+        countries = []
+        for n in news_list:
+            country = n.get('country')
+            if country and str(country) not in ['nan', 'NaN', 'Unknown', 'None', '']:
+                countries.append(country)
+        return list(set(countries))
+    
+    # Groq API로 요약 생성
+    api_key = os.getenv('GROQ_API_KEY')
+    if not api_key:
+        logger.warning("GROQ_API_KEY 없음 - 기본 요약 생성")
+        summary_data = {
+            'generated_at': datetime.now().isoformat(),
+            'news_count': len(filtered_news),
+            'has_issues': True,
+            'summary': f'트래픽 영향 뉴스 {len(filtered_news)}건이 감지되었습니다.',
+            'affected_countries': get_valid_countries(filtered_news),
+            'key_issues': [{'title': n.get('title', '')[:80], 'country': n.get('country', '')} for n in filtered_news[:5]]
+        }
+        
+        with open(SUMMARY_FILE, 'w', encoding='utf-8') as f:
+            json.dump(summary_data, f, ensure_ascii=False, indent=2)
+        
+        return summary_data
+    
+    try:
+        import requests
+        
+        # 뉴스 텍스트 준비 (최대 5개로 줄임)
+        news_items = []
+        for n in filtered_news[:5]:
+            country = n.get('country', '')
+            if str(country) in ['nan', 'NaN', 'Unknown', 'None', '']:
+                country = '글로벌'
+            title = n.get('title', '')[:60]
+            news_items.append(f"[{country}] {title}")
+        
+        news_text = "\n".join(news_items)
+        
+        prompt = f"""아래 뉴스를 분석해 모바일 게임 트래픽 영향을 요약해줘.
+
+{news_text}
+
+요청:
+1. 핵심 영향 2-3문장
+2. 국가별 예상 영향 1문장씩
+3. 간결한 한국어로"""
+
+        response = requests.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": "llama-3.3-70b-versatile",
+                "messages": [
+                    {"role": "system", "content": "모바일 게임 트래픽 전문가. 간결하게 한국어로 답변."},
+                    {"role": "user", "content": prompt}
+                ],
+                "temperature": 0.3,
+                "max_tokens": 500
+            },
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            ai_summary = data['choices'][0]['message']['content']
+            
+            # 영향 국가 추출 (유효한 국가만)
+            affected_countries = get_valid_countries(filtered_news)
+            
+            # key_issues 생성 (NaN 처리)
+            key_issues = []
+            for n in filtered_news[:5]:
+                country = n.get('country', '')
+                if str(country) in ['nan', 'NaN', 'Unknown', 'None', '']:
+                    country = ''
+                key_issues.append({
+                    'title': n.get('title', '')[:80],
+                    'country': country,
+                    'category': n.get('category', 'other')
+                })
+            
+            summary_data = {
+                'generated_at': datetime.now().isoformat(),
+                'news_count': len(filtered_news),
+                'has_issues': True,
+                'summary': ai_summary,
+                'affected_countries': affected_countries,
+                'key_issues': key_issues
+            }
+            
+            logger.info("AI 요약 생성 완료")
+        else:
+            logger.warning(f"Groq API 오류: {response.status_code} - {response.text[:200]}")
+            
+            # key_issues 생성 (NaN 처리)
+            key_issues = []
+            for n in filtered_news[:5]:
+                country = n.get('country', '')
+                if str(country) in ['nan', 'NaN', 'Unknown', 'None', '']:
+                    country = ''
+                key_issues.append({
+                    'title': n.get('title', '')[:80],
+                    'country': country
+                })
+            
+            summary_data = {
+                'generated_at': datetime.now().isoformat(),
+                'news_count': len(filtered_news),
+                'has_issues': True,
+                'summary': f'트래픽 영향 뉴스 {len(filtered_news)}건이 감지되었습니다. (API 오류로 상세 분석 불가)',
+                'affected_countries': get_valid_countries(filtered_news),
+                'key_issues': key_issues
+            }
+    
+    except Exception as e:
+        logger.error(f"요약 생성 오류: {e}")
+        summary_data = {
+            'generated_at': datetime.now().isoformat(),
+            'news_count': len(filtered_news),
+            'has_issues': True,
+            'summary': f'트래픽 영향 뉴스 {len(filtered_news)}건 감지됨. (요약 생성 오류)',
+            'affected_countries': [],
+            'key_issues': []
+        }
+    
+    # 저장
+    with open(SUMMARY_FILE, 'w', encoding='utf-8') as f:
+        json.dump(summary_data, f, ensure_ascii=False, indent=2)
+    
+    logger.info(f"요약 저장 완료: {SUMMARY_FILE}")
+    return summary_data
 
 
 if __name__ == '__main__':

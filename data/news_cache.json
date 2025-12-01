@@ -196,5 +196,23 @@
     "category_group": null,
     "traffic_impact": null,
     "api_source": null
+  },
+  "2fc19ea19839debb": {
+    "category": "outage",
+    "category_group": null,
+    "traffic_impact": null,
+    "api_source": "naver"
+  },
+  "4e7c62afc2fe9434": {
+    "category": "gaming",
+    "category_group": null,
+    "traffic_impact": null,
+    "api_source": null
+  },
+  "89c32e6e1a0e94e7": {
+    "category": "gaming",
+    "category_group": null,
+    "traffic_impact": null,
+    "api_source": null
   }
 }

@@ -1775,67 +1775,120 @@
       }
     });
     
-    // 트래픽 영향 요약 생성
-    function generateTrafficSummary(newsData){
-      // 제외 키워드 (트래픽과 무관)
-      // ※ protest/시위는 트래픽 영향 있으므로 제외하지 않음!
-      // ※ KT는 통신장애 뉴스에 필요하므로 'KT 위즈'로 구체화!
+    // 트래픽 영향 요약 생성 (summary.json 로드)
+    async function generateTrafficSummary(newsData){
+      const summaryContent = document.getElementById('trafficSummaryContent');
+      const summaryMeta = document.getElementById('trafficSummaryMeta');
+      
+      // 로딩 표시
+      summaryContent.innerHTML = `<div style="color:var(--muted)">🔄 AI 요약 로딩 중...</div>`;
+      
+      try {
+        // summary.json 로드 시도
+        const response = await fetch('data/summary.json');
+        
+        if(response.ok){
+          const summaryData = await response.json();
+          
+          if(!summaryData.has_issues){
+            // 특이사항 없음
+            summaryContent.innerHTML = `
+              <div style="color:#2ed573;font-size:18px;margin-bottom:12px">✅ <strong>특이사항 없음</strong></div>
+              <div style="color:var(--text);font-size:14px;line-height:1.6">${summaryData.summary || '최근 24시간 동안 모바일 게임 트래픽에 영향을 줄 만한 주요 이슈가 감지되지 않았습니다.'}</div>
+            `;
+            summaryMeta.style.display = 'none';
+          } else {
+            // AI 요약 표시
+            let html = '';
+            
+            // 전문가 분석 섹션
+            html += `<div style="margin-bottom:20px">`;
+            html += `<div style="font-weight:700;color:#5352ed;margin-bottom:12px;font-size:15px">🎯 전문가 분석</div>`;
+            html += `<div style="padding:16px;background:linear-gradient(135deg,rgba(83,82,237,0.1),rgba(46,213,115,0.05));border-radius:12px;border-left:4px solid #5352ed;font-size:14px;line-height:1.8;white-space:pre-line">`;
+            html += summaryData.summary || '분석 데이터 없음';
+            html += `</div></div>`;
+            
+            // 영향 국가
+            if(summaryData.affected_countries && summaryData.affected_countries.length > 0){
+              const validCountries = summaryData.affected_countries.filter(c => c && c !== 'Unknown' && c !== 'nan');
+              if(validCountries.length > 0){
+                html += `<div style="margin-bottom:16px">`;
+                html += `<div style="font-weight:700;color:#ffa502;margin-bottom:8px">🌍 주요 영향 국가</div>`;
+                html += `<div style="display:flex;flex-wrap:wrap;gap:8px">`;
+                validCountries.forEach(country => {
+                  html += `<span style="padding:6px 12px;background:rgba(255,165,2,0.15);border-radius:20px;font-size:13px;color:#ffa502">${country}</span>`;
+                });
+                html += `</div></div>`;
+              }
+            }
+            
+            // 주요 이슈 목록
+            if(summaryData.key_issues && summaryData.key_issues.length > 0){
+              html += `<div>`;
+              html += `<div style="font-weight:700;color:#ff6b6b;margin-bottom:8px">📌 주요 이슈</div>`;
+              summaryData.key_issues.forEach(issue => {
+                const title = typeof issue === 'string' ? issue : issue.title;
+                const country = typeof issue === 'object' ? issue.country : '';
+                html += `<div style="padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:13px">`;
+                if(country && country !== 'Unknown'){
+                  html += `<span style="background:rgba(255,107,107,0.2);color:#ff6b6b;padding:2px 8px;border-radius:4px;margin-right:8px;font-size:11px">${country}</span>`;
+                }
+                html += `<span>${title}</span>`;
+                html += `</div>`;
+              });
+              html += `</div>`;
+            }
+            
+            summaryContent.innerHTML = html;
+            summaryMeta.style.display = 'block';
+            
+            // 메타 정보 업데이트
+            const generatedAt = summaryData.generated_at ? new Date(summaryData.generated_at).toLocaleString('ko-KR') : new Date().toLocaleString('ko-KR');
+            document.getElementById('summaryTime').textContent = generatedAt;
+            document.getElementById('summaryNewsCount').textContent = summaryData.news_count || 0;
+          }
+        } else {
+          throw new Error('summary.json not found');
+        }
+      } catch(error){
+        console.log('summary.json 로드 실패, 기본 분석 수행:', error);
+        
+        // Fallback: 클라이언트 측 기본 분석
+        generateTrafficSummaryFallback(newsData);
+      }
+    }
+    
+    // Fallback: 클라이언트 측 기본 분석 (summary.json 없을 때)
+    function generateTrafficSummaryFallback(newsData){
       const excludeKeywords = [
-        // 연예/시상식/OTT
-        'MAMA', 'Awards', '시상식', 'mourning', 'concert', '콘서트', '앨범',
-        'K-pop', 'idol', '아이돌', '걸그룹', '보이그룹',
-        '드라마', '예능', '시청률', '넷플릭스', 'Netflix',
-        '열애설', '결별설', '스캔들', '영화제', '레드카펫',
-        // 시위 - 구체적 케이스만
+        'mama', 'awards', '시상식', 'concert', '콘서트', 'idol', '아이돌',
+        '광고', '캠페인', '프로모션', '증시', '코스피', '채용', '분양',
         'immigration protest', 'hindu protest', 'farmer protest',
-        // 광고/마케팅
-        '광고', '협찬', '마케팅', '캠페인', 'campaign', '프로모션', 'PPL', '보도자료',
-        // 금융/증시
-        '증시', '코스피', '코스닥', '나스닥', '주가', '장 마감', '실적발표', '배당', 'IPO',
-        // 채용
-        '채용', '공채', '구인', 'hiring',
-        // 부동산
-        '분양', '청약', '전세', '월세', '매매가', '집값',
-        // 날씨/생활
-        '오늘의 날씨', '미세먼지', '레시피', '맛집',
-        // 스포츠 (KT 위즈만, KT 통신장애는 살림!)
-        'KT 위즈', 'kt wiz', '프로야구', '프로축구', 'NBA', 'MLB'
+        'kt 위즈', '프로야구', '프로축구', 'nba', 'mlb'
       ];
       
-      // 트래픽 뉴스 필터링 + 중복 제거
       const seenTitles = new Set();
       const trafficNews = newsData.filter(n => {
         if(n.news_type !== 'traffic_impact') return false;
-        
         const title = (n.title || '').toLowerCase();
         const titleKey = title.substring(0, 30);
-        
-        // 중복 체크
         if(seenTitles.has(titleKey)) return false;
         seenTitles.add(titleKey);
-        
-        // 제외 키워드 체크
-        if(excludeKeywords.some(kw => title.includes(kw.toLowerCase()))) return false;
-        
+        if(excludeKeywords.some(kw => title.includes(kw))) return false;
         return true;
       });
       
+      const summaryContent = document.getElementById('trafficSummaryContent');
+      const summaryMeta = document.getElementById('trafficSummaryMeta');
+      
       if(trafficNews.length === 0){
-        document.getElementById('trafficSummaryContent').innerHTML = `
-          <div style="color:#2ed573">✅ <strong>특이사항 없음</strong></div>
-          <div style="margin-top:8px;color:var(--muted);font-size:13px">최근 24시간 동안 트래픽에 영향을 줄 만한 주요 이슈가 없습니다.</div>
+        summaryContent.innerHTML = `
+          <div style="color:#2ed573;font-size:18px;margin-bottom:12px">✅ <strong>특이사항 없음</strong></div>
+          <div style="color:var(--text);font-size:14px">최근 24시간 동안 트래픽에 영향을 줄 만한 주요 이슈가 없습니다.</div>
         `;
-        document.getElementById('trafficSummaryMeta').style.display = 'none';
+        summaryMeta.style.display = 'none';
         return;
       }
-      
-      // 카테고리별 분류
-      const categories = {};
-      trafficNews.forEach(news => {
-        const cat = news.category_group || news.category || 'other';
-        if(!categories[cat]) categories[cat] = [];
-        categories[cat].push(news);
-      });
       
       // 국가별 분류
       const countries = {};
@@ -1847,76 +1900,23 @@
         }
       });
       
-      // 요약 HTML 생성
-      let summaryHTML = '';
-      
-      // 주요 이슈 요약
-      summaryHTML += `<div style="margin-bottom:16px">`;
-      summaryHTML += `<div style="font-weight:700;color:#ff6b6b;margin-bottom:8px">🚨 주요 이슈 (최근 24시간)</div>`;
-      summaryHTML += `<ul style="margin:0;padding-left:20px;list-style:none">`;
-      
-      // 카테고리별 요약
-      const categoryNames = {
-        'outage_block': '🔴 장애/차단',
-        'social_crisis': '🟠 사회적 위기',
-        'seasonal_calendar': '🟢 시즌/일정',
-        'gaming_competitor': '🔵 게임/경쟁',
-        'other': '⚪ 기타'
-      };
-      
-      Object.keys(categories).forEach(cat => {
-        const count = categories[cat].length;
-        const catName = categoryNames[cat] || cat;
-        summaryHTML += `<li style="margin-bottom:4px">• ${catName}: <strong>${count}</strong>건</li>`;
-      });
-      summaryHTML += `</ul></div>`;
-      
-      // 트래픽 영향 분석 (전문가 관점)
-      summaryHTML += `<div style="margin-bottom:16px">`;
-      summaryHTML += `<div style="font-weight:700;color:#5352ed;margin-bottom:8px">📈 트래픽 영향 분석</div>`;
-      summaryHTML += `<div style="padding:12px;background:rgba(0,0,0,0.2);border-radius:8px;font-size:13px">`;
-      
-      // 위기 상황 체크
-      const crisisCount = (categories['outage_block'] || []).length + (categories['social_crisis'] || []).length;
-      const seasonCount = (categories['seasonal_calendar'] || []).length;
-      
-      if(crisisCount > 0){
-        summaryHTML += `<div style="margin-bottom:8px">⚠️ <strong style="color:#ff6b6b">주의:</strong> ${crisisCount}건의 위기/장애 관련 뉴스가 감지되었습니다. 해당 지역 트래픽 하락 가능성이 있습니다.</div>`;
-      }
-      
-      if(seasonCount > 0){
-        summaryHTML += `<div style="margin-bottom:8px">📅 <strong style="color:#2ed573">시즌 이벤트:</strong> ${seasonCount}건의 시즌/일정 관련 뉴스가 있습니다. 트래픽 상승 기회가 될 수 있습니다.</div>`;
-      }
-      
-      // 국가별 영향
       const topCountries = Object.keys(countries).sort((a,b) => countries[b].length - countries[a].length).slice(0, 5);
+      
+      let html = `<div style="padding:12px;background:rgba(255,165,2,0.1);border-radius:8px;margin-bottom:16px">`;
+      html += `<div style="color:#ffa502;font-weight:600;margin-bottom:8px">⚠️ AI 요약 미생성</div>`;
+      html += `<div style="font-size:13px;color:var(--text)">로컬에서 뉴스 수집 스크립트를 실행하면 AI 요약이 생성됩니다.</div>`;
+      html += `</div>`;
+      
+      html += `<div style="margin-bottom:12px">`;
+      html += `<strong>📊 기본 분석:</strong> 트래픽 영향 뉴스 ${trafficNews.length}건 감지`;
+      html += `</div>`;
+      
       if(topCountries.length > 0){
-        summaryHTML += `<div>🌍 <strong>주요 영향 국가:</strong> ${topCountries.join(', ')}</div>`;
+        html += `<div><strong>🌍 영향 국가:</strong> ${topCountries.join(', ')}</div>`;
       }
       
-      summaryHTML += `</div></div>`;
-      
-      // 최신 주요 뉴스 3개 (이미 위에서 필터링됨)
-      
-      summaryHTML += `<div>`;
-      summaryHTML += `<div style="font-weight:700;color:#ffa502;margin-bottom:8px">📌 최신 주요 뉴스</div>`;
-      const recentNews = trafficNews.sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 3);
-      
-      if(recentNews.length === 0){
-        summaryHTML += `<div style="padding:8px 0;color:var(--muted);font-size:13px">최근 주요 뉴스가 없습니다.</div>`;
-      } else {
-        recentNews.forEach(news => {
-          const catIcon = categoryNames[news.category_group]?.split(' ')[0] || '📰';
-          summaryHTML += `<div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:13px">`;
-          summaryHTML += `<span style="margin-right:8px">${catIcon}</span>`;
-          summaryHTML += `<span>${news.title?.substring(0, 60)}${news.title?.length > 60 ? '...' : ''}</span>`;
-          summaryHTML += `</div>`;
-        });
-      }
-      summaryHTML += `</div>`;
-      
-      document.getElementById('trafficSummaryContent').innerHTML = summaryHTML;
-      document.getElementById('trafficSummaryMeta').style.display = 'block';
+      summaryContent.innerHTML = html;
+      summaryMeta.style.display = 'block';
       document.getElementById('summaryTime').textContent = new Date().toLocaleString('ko-KR');
       document.getElementById('summaryNewsCount').textContent = trafficNews.length;
     }
