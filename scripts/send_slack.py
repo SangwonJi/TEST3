@@ -1,6 +1,7 @@
 """
 PUBGM 트래픽 영향 뉴스를 슬랙으로 발송하는 스크립트
 매일 아침 9시 자동 발송용
+- AI 요약 기능 포함 (Groq/OpenAI)
 """
 import os
 import json
@@ -14,6 +15,35 @@ load_dotenv()
 
 NEWS_CSV = 'data/news.csv'
 
+# 트래픽 영향 분석용 키워드 (실제 영향 있는 것만)
+IMPACT_KEYWORDS = {
+    'high_impact': [
+        # 인프라 장애 (확실한 영향)
+        'internet shutdown', 'internet outage', 'power outage', 'blackout', 
+        '인터넷 차단', '인터넷 장애', '정전', '대규모 정전',
+        # 자연재해 (통신 인프라 영향 시)
+        'earthquake damage', 'flood damage', 'typhoon damage',
+        '지진 피해', '홍수 피해', '태풍 피해', '통신망', '인프라 피해'
+    ],
+    'medium_impact': [
+        # 사회적 혼란 (인터넷 차단 동반 시)
+        'curfew', 'martial law', '통금', '계엄',
+        # 대규모 공휴일
+        'national holiday', '국경일', '연휴'
+    ]
+}
+
+# 제외할 키워드 (트래픽과 무관)
+EXCLUDE_KEYWORDS = [
+    # 연예/시상식
+    'MAMA', 'Awards', '시상식', '콘서트', 'concert', '앨범', 'album',
+    'K-pop', 'idol', '아이돌', '걸그룹', '보이그룹', 'mourning', 'tragedy',
+    # 일반 시위 (인터넷 차단 없으면 무관)
+    'protest', 'PROTEST', '시위', 'immigration', 'hindu',
+    # 스포츠
+    'FIFA', 'World Cup', '월드컵', 'Olympics'
+]
+
 # 카테고리 그룹 정보
 CATEGORY_INFO = {
     'outage_block': {'icon': '🔴', 'name': '장애/차단', 'color': '#ff4757'},
@@ -22,6 +52,142 @@ CATEGORY_INFO = {
     'gaming_competitor': {'icon': '🔵', 'name': '게임/경쟁', 'color': '#5352ed'},
     'other': {'icon': '⚪', 'name': '기타', 'color': '#95a5a6'}
 }
+
+
+def filter_relevant_news(news_list):
+    """트래픽과 관련 있는 뉴스만 필터링 (중복 제거 포함)"""
+    relevant = []
+    seen_titles = set()  # 중복 제거용
+    
+    for news in news_list:
+        title = (news.get('title', '') or '')
+        title_lower = title.lower()
+        summary = (news.get('summary', '') or '').lower()
+        text = f"{title_lower} {summary}"
+        
+        # 중복 체크 (제목 앞 30자로 판단)
+        title_key = title_lower[:30]
+        if title_key in seen_titles:
+            continue
+        seen_titles.add(title_key)
+        
+        # 제외 키워드 체크
+        if any(kw.lower() in text for kw in EXCLUDE_KEYWORDS):
+            continue
+        
+        # 영향도 체크 (실제 영향 있는 키워드만)
+        impact_level = None
+        for level, keywords in IMPACT_KEYWORDS.items():
+            if any(kw.lower() in text for kw in keywords):
+                impact_level = level
+                break
+        
+        if impact_level:
+            news['impact_level'] = impact_level
+            relevant.append(news)
+    
+    # 영향도 순으로 정렬 (high > medium)
+    priority = {'high_impact': 0, 'medium_impact': 1}
+    relevant.sort(key=lambda x: priority.get(x.get('impact_level', 'medium_impact'), 2))
+    
+    return relevant
+
+
+def generate_ai_summary(news_list):
+    """AI를 사용하여 트래픽 영향 요약 생성"""
+    
+    if not news_list:
+        return "✅ *특이사항 없음*\n지난 24시간 동안 모바일 게임 트래픽에 영향을 줄 만한 주요 이슈가 감지되지 않았습니다."
+    
+    # Groq API 사용
+    groq_key = os.getenv('GROQ_API_KEY')
+    openai_key = os.getenv('OPENAI_API_KEY')
+    
+    # 뉴스 요약 텍스트 준비
+    news_text = ""
+    for i, news in enumerate(news_list[:10]):  # 최대 10개
+        title = news.get('title', '')[:100]
+        country = news.get('country', 'Unknown')
+        impact = news.get('impact_level', 'unknown')
+        news_text += f"{i+1}. [{country}] {title} (영향도: {impact})\n"
+    
+    prompt = f"""뉴스를 보고 모바일 게임 트래픽 영향을 간단히 정리해줘.
+
+{news_text}
+
+작성 규칙:
+- 국가별로 한 줄씩, 총 2-3줄 이내
+- 자연스러운 한국어로 (번역체 금지)
+- 이모지: 🔴 심각, 🟠 주의, 🟢 긍정
+- 트래픽 영향 없으면: "✅ 특이사항 없음"
+
+좋은 예시:
+🔴 인도네시아 - 홍수 피해로 통신망 불안정, 당분간 접속자 감소 예상
+🟠 파키스탄 - 일부 지역 정전, 소폭 하락 가능성
+
+나쁜 예시 (이렇게 쓰지 마):
+- "지역 사회가 혼란스럽게 됨" (번역체)
+- "트래픽에 영향을 줄 수 있다" (애매함)
+- "게임 개발자들은 최적화해야 한다" (불필요)"""
+
+    # Groq API 시도
+    if groq_key:
+        try:
+            response = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {groq_key}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": "llama-3.1-8b-instant",
+                    "messages": [{"role": "user", "content": prompt}],
+                    "max_tokens": 300,
+                    "temperature": 0.3
+                },
+                timeout=30
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                return result['choices'][0]['message']['content'].strip()
+        except Exception as e:
+            print(f"Groq API error: {e}")
+    
+    # OpenAI API 시도
+    if openai_key:
+        try:
+            response = requests.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {openai_key}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": "gpt-3.5-turbo",
+                    "messages": [{"role": "user", "content": prompt}],
+                    "max_tokens": 300,
+                    "temperature": 0.3
+                },
+                timeout=30
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                return result['choices'][0]['message']['content'].strip()
+        except Exception as e:
+            print(f"OpenAI API error: {e}")
+    
+    # API 없으면 기본 요약 생성
+    if news_list:
+        high_impact = [n for n in news_list if n.get('impact_level') == 'high_impact']
+        if high_impact:
+            countries = list(set([n.get('country', 'Unknown') for n in high_impact[:3]]))
+            return f"🔴 *주의 필요*\n{', '.join(countries)} 지역에서 트래픽에 영향을 줄 수 있는 이슈가 감지되었습니다. 해당 지역 트래픽 모니터링을 권장합니다."
+        else:
+            return "🟢 *경미한 이슈*\n일부 뉴스가 감지되었으나 트래픽에 큰 영향은 없을 것으로 예상됩니다."
+    
+    return "✅ *특이사항 없음*\n지난 24시간 동안 모바일 게임 트래픽에 영향을 줄 만한 주요 이슈가 감지되지 않았습니다."
 
 
 def get_recent_news(hours=24):
@@ -43,23 +209,26 @@ def get_recent_news(hours=24):
 
 
 def create_slack_message(traffic_news, gaming_news):
-    """슬랙 메시지 포맷 생성"""
+    """슬랙 메시지 포맷 생성 - 일일 리포트 형식 (AI 요약 포함)"""
     
-    today = datetime.now().strftime('%Y년 %m월 %d일')
+    today_short = datetime.now().strftime('%y.%m.%d')
+    today_weekday = ['월', '화', '수', '목', '금', '토', '일'][datetime.now().weekday()]
     
-    # 카테고리별 집계
-    category_counts = {}
-    for news in traffic_news:
-        cat = news.get('category_group', 'other')
-        category_counts[cat] = category_counts.get(cat, 0) + 1
+    # 관련 뉴스만 필터링
+    relevant_news = filter_relevant_news(traffic_news)
     
-    # 메시지 헤더
+    # AI 요약 생성
+    print("Generating AI summary...")
+    ai_summary = generate_ai_summary(relevant_news)
+    print("AI Summary generated.")
+    
+    # 메시지 블록 구성
     blocks = [
         {
             "type": "header",
             "text": {
                 "type": "plain_text",
-                "text": f"📊 PUBGM 트래픽 리포트 - {today}",
+                "text": f"📊 [{today_short} {today_weekday}] PUBGM 일일 트래픽 리포트",
                 "emoji": True
             }
         },
@@ -67,102 +236,59 @@ def create_slack_message(traffic_news, gaming_news):
             "type": "section",
             "text": {
                 "type": "mrkdwn",
-                "text": f"*지난 24시간 뉴스 현황*\n⚡ 트래픽 영향: *{len(traffic_news)}건* | 🎮 게임 뉴스: *{len(gaming_news)}건*"
-            }
-        },
-        {"type": "divider"}
-    ]
-    
-    # 트래픽 영향 뉴스가 있을 때
-    if traffic_news:
-        # 카테고리별 현황
-        cat_text = ""
-        for cat, count in sorted(category_counts.items(), key=lambda x: -x[1]):
-            info = CATEGORY_INFO.get(cat, CATEGORY_INFO['other'])
-            cat_text += f"{info['icon']} {info['name']}: *{count}건*\n"
-        
-        blocks.append({
-            "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": f"*🚨 트래픽 영향 이슈*\n{cat_text}"
-            }
-        })
-        
-        # 위기/장애 체크
-        crisis_count = category_counts.get('outage_block', 0) + category_counts.get('social_crisis', 0)
-        if crisis_count > 0:
-            blocks.append({
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": f"⚠️ *주의:* {crisis_count}건의 위기/장애 관련 뉴스가 감지되었습니다."
-                }
-            })
-        
-        # 주요 뉴스 3개
-        blocks.append({"type": "divider"})
-        blocks.append({
-            "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": "*📌 주요 뉴스*"
-            }
-        })
-        
-        for news in traffic_news[:3]:
-            cat = news.get('category_group', 'other')
-            info = CATEGORY_INFO.get(cat, CATEGORY_INFO['other'])
-            title = news.get('title', '')[:60]
-            country = news.get('country', '')
-            
-            news_text = f"{info['icon']} {title}"
-            if country and country != 'Unknown':
-                news_text += f" ({country})"
-            
-            blocks.append({
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": news_text
-                },
-                "accessory": {
-                    "type": "button",
-                    "text": {
-                        "type": "plain_text",
-                        "text": "보기",
-                        "emoji": True
-                    },
-                    "url": news.get('url', '#'),
-                    "action_id": f"view_news_{traffic_news.index(news)}"
-                }
-            })
-    else:
-        blocks.append({
-            "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": "✅ 지난 24시간 동안 특이한 트래픽 영향 이슈가 없습니다."
-            }
-        })
-    
-    # 대시보드 링크
-    blocks.append({"type": "divider"})
-    blocks.append({
-        "type": "actions",
-        "elements": [
-            {
+                "text": "안녕하세요! 일일 리포트 전달드립니다."
+            },
+            "accessory": {
                 "type": "button",
                 "text": {
                     "type": "plain_text",
-                    "text": "📊 대시보드 바로가기",
+                    "text": "📊 대시보드",
                     "emoji": True
                 },
                 "url": "https://sangwonji.github.io/TEST3/",
                 "style": "primary"
             }
-        ]
-    })
+        },
+        {
+            "type": "context",
+            "elements": [
+                {
+                    "type": "mrkdwn",
+                    "text": "*CSV 활용 방법* :point_right: 대시보드 접속 → 파일 선택 → CSV 첨부 → Load CSV\nCSV는 댓글에서 확인 부탁드립니다 :bow:"
+                }
+            ]
+        },
+        {"type": "divider"},
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": f"*📈 24시간 뉴스 수집 현황*\n• ⚡ 트래픽 영향: *{len(traffic_news)}건* (관련 이슈: *{len(relevant_news)}건*)\n• 🎮 게임 뉴스: *{len(gaming_news)}건*"
+            }
+        },
+        {"type": "divider"},
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": f"*🎯 트래픽 영향 요약*\n{ai_summary}"
+            }
+        }
+    ]
+    
+    # 주요 영향 국가 (관련 뉴스가 있을 때만)
+    if relevant_news:
+        countries = list(set([str(n.get('country', '')) for n in relevant_news if n.get('country') and str(n.get('country', '')) not in ['Unknown', 'nan', '']]))[:5]
+        if countries:
+            blocks.append({
+                "type": "context",
+                "elements": [
+                    {
+                        "type": "mrkdwn",
+                        "text": f"🌍 *주요 영향 국가:* {', '.join(countries)}"
+                    }
+                ]
+            })
     
     return {"blocks": blocks}
 

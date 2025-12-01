@@ -289,9 +289,8 @@
       <!-- News & Headlines Tab -->
       <div class="tab-content" id="tab-news">
         <div class="news-container">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+          <div style="margin-bottom:20px">
             <div class="section-title" style="margin:0">📰 News & Headlines</div>
-            <button id="btnRefreshNews" style="padding:8px 16px;background:linear-gradient(135deg,#238636,#2ea043);border:none;border-radius:6px;color:#fff;font-weight:600;cursor:pointer;font-size:13px">🔄 새로고침</button>
           </div>
           
           <!-- 🔥 트래픽 영향 요약 섹션 (AI 분석) -->
@@ -2353,9 +2352,6 @@
       loadNews(countriesForNews);
     }
 
-    document.getElementById('btnRefreshNews')?.addEventListener('click', () => {
-      loadNewsFromCSV();
-    });
 
     // Update tabs when data changes
     const originalCreateTreemap = createTreemap;
