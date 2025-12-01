@@ -1777,12 +1777,34 @@
     
     // 트래픽 영향 요약 생성
     function generateTrafficSummary(newsData){
-      const trafficNews = newsData.filter(n => n.news_type === 'traffic_impact');
+      // 제외 키워드 (트래픽과 무관)
+      const excludeKeywords = ['MAMA', 'Awards', '시상식', 'mourning', 'tragedy', 'concert', 
+                               'PROTEST', 'protest', '시위', 'immigration', 'idol', '아이돌'];
+      
+      // 트래픽 뉴스 필터링 + 중복 제거
+      const seenTitles = new Set();
+      const trafficNews = newsData.filter(n => {
+        if(n.news_type !== 'traffic_impact') return false;
+        
+        const title = (n.title || '').toLowerCase();
+        const titleKey = title.substring(0, 30);
+        
+        // 중복 체크
+        if(seenTitles.has(titleKey)) return false;
+        seenTitles.add(titleKey);
+        
+        // 제외 키워드 체크
+        if(excludeKeywords.some(kw => title.includes(kw.toLowerCase()))) return false;
+        
+        return true;
+      });
       
       if(trafficNews.length === 0){
         document.getElementById('trafficSummaryContent').innerHTML = `
-          <div style="color:var(--muted)">현재 수집된 트래픽 영향 뉴스가 없습니다.</div>
+          <div style="color:#2ed573">✅ <strong>특이사항 없음</strong></div>
+          <div style="margin-top:8px;color:var(--muted);font-size:13px">최근 24시간 동안 트래픽에 영향을 줄 만한 주요 이슈가 없습니다.</div>
         `;
+        document.getElementById('trafficSummaryMeta').style.display = 'none';
         return;
       }
       
@@ -1798,8 +1820,10 @@
       const countries = {};
       trafficNews.forEach(news => {
         const country = news.country || 'Unknown';
-        if(!countries[country]) countries[country] = [];
-        countries[country].push(news);
+        if(country && country !== 'Unknown' && country !== 'nan'){
+          if(!countries[country]) countries[country] = [];
+          countries[country].push(news);
+        }
       });
       
       // 요약 HTML 생성

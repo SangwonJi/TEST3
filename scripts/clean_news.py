@@ -14,6 +14,11 @@ EXCLUDE_KEYWORDS = [
     'K9', 'K2', '한화에어로', '한화디펜스', 'defense contract',
     '방위사업', 'military contract', 'arms deal',
     'DMZ', 'Korean War soldiers', '유해 발굴', '전사자',
+    # 연예/시상식 (트래픽 무관)
+    'MAMA', 'Awards', '시상식', 'mourning', 'tragedy', 'Hong Kong tragedy',
+    'K-pop', 'idol', '아이돌',
+    # 일반 시위 (인터넷 차단 없으면 무관)
+    'PROTEST', 'protest', 'immigration protest', 'hindu protest',
     # 광고/마케팅
     '캠페인', 'campaign', '프로모션', 'promotion', '팝업', 'popup',
     '콜라보', 'collaboration', '신제품',
