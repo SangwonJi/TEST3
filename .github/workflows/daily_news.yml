@@ -1,4 +1,4 @@
-name: Daily News Collection
+name: Daily News Collection & Slack Report
 
 on:
   schedule:
@@ -26,15 +26,18 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
       
-      - name: Run news collection script (RSS only)
+      - name: Run news collection script
         id: collect_news
         env:
           NEWS_API_TYPE: rss
-          # API 키는 사용하지 않음 (RSS만 사용)
         run: |
           python scripts/fetch_news.py
           exit_code=$?
           echo "exit_code=$exit_code" >> $GITHUB_OUTPUT
+      
+      - name: Clean irrelevant news
+        run: |
+          python scripts/clean_news.py
       
       - name: Check for changes
         id: check_changes
@@ -50,22 +53,32 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add data/news.csv
+          git add data/news.csv data/news_cache.json
           DATE=$(date +%Y-%m-%d)
-          git commit -m "Auto-update: Daily news data [$DATE]"
+          git commit -m "Auto-update: Daily news [$DATE]"
           git push
+      
+      - name: Send Slack notification
+        if: always()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          if [ -n "$SLACK_WEBHOOK_URL" ]; then
+            python scripts/send_slack.py
+          else
+            echo "SLACK_WEBHOOK_URL not set - skipping Slack notification"
+          fi
       
       - name: Report status
         if: always()
         run: |
           if [ "${{ steps.collect_news.outputs.exit_code }}" == "0" ]; then
             if [ "${{ steps.check_changes.outputs.has_changes }}" == "true" ]; then
-              echo "✅ 뉴스 수집 완료: 새로운 뉴스가 추가되었습니다."
+              echo "✅ News collection complete: New news added"
             else
-              echo "ℹ️ 뉴스 수집 완료: 새로운 뉴스가 없습니다."
+              echo "ℹ️ News collection complete: No new news"
             fi
           else
-            echo "❌ 뉴스 수집 실패"
+            echo "❌ News collection failed"
             exit 1
           fi
-

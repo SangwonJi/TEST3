@@ -452,9 +452,9 @@ def fetch_from_deepsearch(keywords: List[str], countries: List[str] = None, max_
         
         results = []
         
-        # 날짜 범위 (최근 7일)
+        # 날짜 범위 (최근 24시간)
         date_to = datetime.now().strftime('%Y-%m-%d')
-        date_from = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
+        date_from = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
         
         for keyword in keywords[:10]:  # 최대 10개 키워드
             try:
@@ -1103,8 +1103,8 @@ def fetch_news_from_rss(keyword: str, max_retries: int = 3) -> List[Dict]:
                 except (AttributeError, TypeError):
                     pub_date = datetime.now()
                 
-                # 오늘부터 7일 이내 뉴스만
-                if pub_date < datetime.now() - timedelta(days=7):
+                # 오늘부터 24시간 이내 뉴스만
+                if pub_date < datetime.now() - timedelta(days=1):
                     continue
                 
                 # HTML 태그 제거
