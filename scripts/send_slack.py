@@ -110,12 +110,31 @@ def filter_relevant_news(news_list):
 
 
 def generate_ai_summary(news_list):
-    """AI를 사용하여 트래픽 영향 요약 생성"""
+    """AI를 사용하여 트래픽 영향 요약 생성 (summary.json 우선 사용)"""
+    
+    # 먼저 summary.json 확인 (fetch_news.py에서 생성한 상세 요약)
+    summary_file = 'data/summary.json'
+    if os.path.exists(summary_file):
+        try:
+            with open(summary_file, 'r', encoding='utf-8') as f:
+                summary_data = json.load(f)
+            
+            if summary_data.get('has_issues') and summary_data.get('summary'):
+                # 마크다운을 슬랙 형식으로 변환
+                summary_text = summary_data['summary']
+                # **text** -> *text* (슬랙 볼드)
+                import re
+                summary_text = re.sub(r'\*\*([^*]+)\*\*', r'*\1*', summary_text)
+                return summary_text
+            elif not summary_data.get('has_issues'):
+                return "✅ *특이사항 없음*\n지난 24시간 동안 모바일 게임 트래픽에 영향을 줄 만한 주요 이슈가 감지되지 않았습니다."
+        except Exception as e:
+            print(f"summary.json 읽기 오류: {e}")
     
     if not news_list:
         return "✅ *특이사항 없음*\n지난 24시간 동안 모바일 게임 트래픽에 영향을 줄 만한 주요 이슈가 감지되지 않았습니다."
     
-    # Groq API 사용
+    # Groq API 사용 (summary.json 없을 때 fallback)
     groq_key = os.getenv('GROQ_API_KEY')
     openai_key = os.getenv('OPENAI_API_KEY')
     
