@@ -45,6 +45,12 @@ EXCLUDE_KEYWORDS = [
     '서울', 'Seoul', '부산', '대구', '인천',
     '네이트', 'nate.com',
     
+    # ========== e스포츠 ==========
+    'esports', 'e-sports', 'e스포츠', '이스포츠',
+    'PMGC', 'PMPL', 'PCS', 'PGC', 'tournament', '토너먼트',
+    '대회', 'championship', 'league', '리그',
+    'pro player', '프로선수', 'pro team', '프로팀',
+    
     # ========== 스포츠 (e스포츠/월드컵/올림픽 제외) ==========
     # ※ KT 위즈만 제외 (KT 통신장애는 살려야 함!)
     'KT 위즈', 'kt wiz', 'KT위즈',

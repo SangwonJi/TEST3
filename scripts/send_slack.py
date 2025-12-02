@@ -51,6 +51,10 @@ EXCLUDE_KEYWORDS = [
     # 한국 관련 (글로벌 관점에서 제외)
     '한국', 'South Korea', 'Korea', '북한', 'North Korea',
     '서울', 'Seoul', '네이트', 'nate.com',
+    # e스포츠
+    'esports', 'e-sports', 'e스포츠', '이스포츠',
+    'PMGC', 'PMPL', 'tournament', '토너먼트', '대회',
+    'championship', 'league', '리그', '프로선수', '프로팀',
     # 광고/마케팅
     '광고', '협찬', '마케팅', '캠페인', 'campaign', '프로모션',
     'sponsored', 'sponsorship', 'PPL', '보도자료',
