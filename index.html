@@ -607,7 +607,7 @@
       
       if(days === 0) {
         // 전체 데이터
-        document.getElementById('btnClearDateRange').click();
+        clearDateRangeFilter();
         updateDateRangeText('전체 데이터');
         return;
       }
@@ -645,8 +645,8 @@
       const formatDate = (d) => `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
       updateDateRangeText(`${formatDate(minDate)} ~ ${formatDate(maxDate)} (${days}일)`);
       
-      // Apply 버튼 클릭
-      document.getElementById('btnApplyDateRange').click();
+      // 직접 날짜 필터 적용
+      applyDateRangeFilter();
     }
     
     function updateDateRangeText(text) {
@@ -654,17 +654,17 @@
       if(rangeText) rangeText.textContent = text;
     }
     
-    // 날짜 범위 필터 적용
-    document.getElementById('btnApplyDateRange').addEventListener('click', ()=>{
+    // 날짜 범위 필터 적용 함수
+    function applyDateRangeFilter() {
       if(!rawCsvRows || rawCsvRows.length === 0){
-        alert('Please load CSV file first.');
+        console.log('No CSV data');
         return;
       }
       const startDate = document.getElementById('startDate').value;
       const endDate = document.getElementById('endDate').value;
       
       if(!startDate || !endDate){
-        alert('Please select both start and end dates.');
+        console.log('No date range set');
         return;
       }
       
@@ -673,9 +673,11 @@
       end.setHours(23, 59, 59, 999); // 종료일 포함
       
       if(start > end){
-        alert('Start date must be before end date.');
+        console.log('Invalid date range');
         return;
       }
+      
+      console.log('Applying date filter:', startDate, '~', endDate);
       
       // 날짜 범위 필터링
       const firstRow = rawCsvRows[0] || {};
@@ -758,14 +760,10 @@
       }
     });
     
-    // 날짜 범위 필터 초기화
-    document.getElementById('btnClearDateRange').addEventListener('click', ()=>{
+    // 날짜 범위 필터 초기화 함수
+    function clearDateRangeFilter() {
       document.getElementById('startDate').value = '';
       document.getElementById('endDate').value = '';
-      
-      // Date Range 표시 숨기기
-      const indicator = document.getElementById('dateRangeIndicator');
-      if(indicator) indicator.style.display = 'none';
       
       if(rawCsvRows && rawCsvRows.length > 0){
         const p = processData(rawCsvRows);
@@ -782,6 +780,12 @@
           }
         }
       }
+    }
+    
+    // 날짜 범위 필터 초기화 (버튼용)
+    document.getElementById('btnClearDateRange').addEventListener('click', ()=>{
+      clearDateRangeFilter();
+      updateDateRangeText('전체 데이터');
     });
 
     function processData(rows){
