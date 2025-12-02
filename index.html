@@ -119,7 +119,7 @@
       </div>
     </div>
 
-    <div class="filter-controls">
+    <div class="filter-controls" id="treemapFilters">
       <label><strong>Show Top:</strong> <input type="number" id="topCount" value="180" min="10" max="250"/></label>
       <label><strong>Sort By:</strong>
         <select id="sortBy">
@@ -1231,6 +1231,12 @@
         // Add active class to clicked button and corresponding content
         button.classList.add('active');
         document.getElementById(`tab-${tabName}`).classList.add('active');
+        
+        // News 탭에서는 Treemap 필터 숨기기
+        const treemapFilters = document.getElementById('treemapFilters');
+        if(treemapFilters){
+          treemapFilters.style.display = (tabName === 'news') ? 'none' : 'flex';
+        }
         
         // Update content based on tab
         if(tabName === 'risers-fallers'){
