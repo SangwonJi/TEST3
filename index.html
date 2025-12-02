@@ -259,7 +259,7 @@
         </div>
         <div class="risers-fallers-grid">
           <div class="risers-section">
-            <div class="section-title" style="color:#00ff00">📈 Risers (5% 이상 상승)</div>
+            <div class="section-title" id="risersTitle" style="color:#00ff00">📈 Risers (5% 이상 상승)</div>
             <div class="country-list" id="risersList">
               <div class="empty-state">
                 <div class="empty-state-icon">📊</div>
@@ -268,7 +268,7 @@
             </div>
           </div>
           <div class="fallers-section">
-            <div class="section-title" style="color:#ff4d4d">📉 Fallers (5% 이상 하락)</div>
+            <div class="section-title" id="fallersTitle" style="color:#ff4d4d">📉 Fallers (5% 이상 하락)</div>
             <div class="country-list" id="fallersList">
               <div class="empty-state">
                 <div class="empty-state-icon">📊</div>
@@ -1339,6 +1339,21 @@
       
       // 트래픽 필터 값 가져오기 (기본값: 50000)
       const trafficFilter = parseFloat(document.getElementById('risersFallersTrafficFilter')?.value || '50000');
+      
+      // 비교 기준 라벨 업데이트
+      const comparisonType = document.getElementById('comparisonType')?.value || 'DoD';
+      const comparisonLabels = {
+        'DoD': 'DoD (전일 대비)',
+        'WoW': 'WoW (7일 합계)',
+        'MoM': 'MoM (30일 합계)',
+        'QoQ': 'QoQ (90일 합계)',
+        'YoY': 'YoY (전년 대비)',
+        'Period': 'Period (기간 전체)'
+      };
+      const compLabel = comparisonLabels[comparisonType] || comparisonType;
+      
+      document.getElementById('risersTitle').innerHTML = `📈 Risers <span style="font-size:12px;font-weight:normal">(${compLabel} 5%↑)</span>`;
+      document.getElementById('fallersTitle').innerHTML = `📉 Fallers <span style="font-size:12px;font-weight:normal">(${compLabel} 5%↓)</span>`;
       
       const risers = [];
       const fallers = [];
