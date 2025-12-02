@@ -907,8 +907,8 @@
       const lastDate = allDates.length > 0 ? new Date(allDates[allDates.length - 1]) : null;
       
       for(let i=0;i<Country.length;i++){
-        // 마지막 날 트래픽
-        const lastDayValue = (lastDate && trafficByDate[allDates[allDates.length - 1]] && trafficByDate[allDates[allDates.length - 1]][i]) || 0;
+        // 마지막 날 트래픽 (WoW/MoM/QoQ에서 기간 합계로 변경될 수 있음)
+        let lastDayValue = (lastDate && trafficByDate[allDates[allDates.length - 1]] && trafficByDate[allDates[allDates.length - 1]][i]) || 0;
         lastDayTraffic.push(lastDayValue);
         
         // 비교 기준일 찾기
