@@ -157,6 +157,32 @@
         <div class="content">
       <!-- Treemap Tab -->
       <div class="tab-content active" id="tab-treemap">
+        <!-- 데이터 기준 정보 표시 -->
+        <div id="dataContextInfo" style="display:none;margin-bottom:16px;padding:14px 20px;background:linear-gradient(135deg,rgba(35,134,54,0.1),rgba(83,82,237,0.1));border:1px solid rgba(35,134,54,0.3);border-radius:10px">
+          <div style="display:flex;flex-wrap:wrap;gap:24px;align-items:center">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:18px">📅</span>
+              <div>
+                <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px">데이터 기간</div>
+                <div id="dataContextPeriod" style="font-size:14px;color:#fff;font-weight:600">-</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:18px">📊</span>
+              <div>
+                <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px">변화율 기준</div>
+                <div id="dataContextComparison" style="font-size:14px;color:#fff;font-weight:600">-</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:18px">📁</span>
+              <div>
+                <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px">데이터 수</div>
+                <div id="dataContextRows" style="font-size:14px;color:#fff;font-weight:600">-</div>
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="stats-grid" id="stats"></div>
         <div id="treemap">
           <div class="loading-overlay" id="loadingOverlay">
@@ -960,7 +986,12 @@
         
         // 비교 기준 정보 업데이트
         const comparisonInfo = document.getElementById('comparisonInfo');
-        if(comparisonInfo && data.allDates && data.allDates.length > 0){
+        const dataContextInfo = document.getElementById('dataContextInfo');
+        const dataContextPeriod = document.getElementById('dataContextPeriod');
+        const dataContextComparison = document.getElementById('dataContextComparison');
+        const dataContextRows = document.getElementById('dataContextRows');
+        
+        if(data.allDates && data.allDates.length > 0){
           const lastDate = data.allDates[data.allDates.length - 1];
           const firstDate = data.allDates[0];
           const prevDate = data.allDates.length > 1 ? data.allDates[data.allDates.length - 2] : firstDate;
@@ -970,31 +1001,64 @@
             return `${date.getMonth()+1}/${date.getDate()}`;
           };
           
-          let infoText = '';
+          const formatDateFull = (d) => {
+            const date = new Date(d);
+            return `${date.getFullYear()}.${String(date.getMonth()+1).padStart(2,'0')}.${String(date.getDate()).padStart(2,'0')}`;
+          };
+          
+          let comparisonLabel = '';
+          let compareFromDate = '';
+          let compareToDate = formatDate(lastDate);
+          
           switch(comparisonType){
             case 'DoD':
-              infoText = `📊 ${formatDate(prevDate)} → ${formatDate(lastDate)}`;
+              comparisonLabel = '전일 대비';
+              compareFromDate = formatDate(prevDate);
               break;
             case 'WoW':
+              comparisonLabel = '전주 대비';
               const weekAgo = new Date(lastDate);
               weekAgo.setDate(weekAgo.getDate() - 7);
-              infoText = `📊 ${formatDate(weekAgo)} → ${formatDate(lastDate)}`;
+              compareFromDate = formatDate(weekAgo);
               break;
             case 'MoM':
+              comparisonLabel = '전월 대비';
               const monthAgo = new Date(lastDate);
               monthAgo.setMonth(monthAgo.getMonth() - 1);
-              infoText = `📊 ${formatDate(monthAgo)} → ${formatDate(lastDate)}`;
+              compareFromDate = formatDate(monthAgo);
               break;
             case 'YoY':
+              comparisonLabel = '전년 대비';
               const yearAgo = new Date(lastDate);
               yearAgo.setFullYear(yearAgo.getFullYear() - 1);
-              infoText = `📊 ${formatDate(yearAgo)} → ${formatDate(lastDate)}`;
+              compareFromDate = formatDate(yearAgo);
               break;
             case 'Period':
-              infoText = `📊 ${formatDate(firstDate)} → ${formatDate(lastDate)} (전체)`;
+              comparisonLabel = '기간 전체';
+              compareFromDate = formatDate(firstDate);
               break;
           }
-          comparisonInfo.textContent = infoText;
+          
+          // 작은 info 텍스트 (드롭다운 옆)
+          if(comparisonInfo){
+            comparisonInfo.textContent = `${compareFromDate} → ${compareToDate}`;
+          }
+          
+          // 큰 데이터 기준 박스
+          if(dataContextInfo){
+            dataContextInfo.style.display = 'block';
+            
+            // 데이터 기간
+            const daysDiff = data.allDates.length;
+            dataContextPeriod.textContent = `${formatDateFull(firstDate)} ~ ${formatDateFull(lastDate)} (${daysDiff}일)`;
+            
+            // 변화율 기준
+            dataContextComparison.innerHTML = `<span style="color:#2ed573">${comparisonLabel}</span> <span style="color:var(--muted);font-weight:400">(${compareFromDate} → ${compareToDate})</span>`;
+            
+            // 데이터 수
+            const totalCountries = data.Country ? data.Country.length : 0;
+            dataContextRows.textContent = `${totalCountries}개 국가`;
+          }
         }
 
         // KPIs
