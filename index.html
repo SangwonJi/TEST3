@@ -1677,6 +1677,7 @@
       const lastDate = data.lastDate;
       const lastDateIndex = data.allDates.length - 1;
       const lastTraffic = (data.trafficByDate[data.allDates[lastDateIndex]] && data.trafficByDate[data.allDates[lastDateIndex]][countryIndex]) || 0;
+      let lastTrafficForCalc = lastTraffic; // WoW/MoM/QoQ에서 기간 합계로 변경됨
       
       // Calculate change
       let compareValue = null;
@@ -1702,41 +1703,75 @@
             }
             break;
           case 'WoW':
-            compareDateObj.setDate(compareDateObj.getDate() - 7);
-            const wowDate = `${compareDateObj.getFullYear()}-${String(compareDateObj.getMonth()+1).padStart(2,'0')}-${String(compareDateObj.getDate()).padStart(2,'0')}`;
-            const wowDates = data.allDates.filter(d => {
-              const dObj = new Date(d);
-              const diff = Math.abs((dObj - compareDateObj) / (1000 * 60 * 60 * 24));
-              return diff <= 1;
-            });
-            if(wowDates.length > 0){
-              const closestDate = wowDates.sort((a,b) => {
-                const aDiff = Math.abs((new Date(a) - compareDateObj) / (1000 * 60 * 60 * 24));
-                const bDiff = Math.abs((new Date(b) - compareDateObj) / (1000 * 60 * 60 * 24));
-                return aDiff - bDiff;
-              })[0];
-              if(data.trafficByDate[closestDate] && data.trafficByDate[closestDate][countryIndex] !== undefined){
-                compareValue = data.trafficByDate[closestDate][countryIndex];
+            // Week over Week: 최근 7일 합계 vs 이전 7일 합계
+            {
+              const periodDays = 7;
+              let currentSum = 0, prevSum = 0;
+              const lastIdx = data.allDates.length - 1;
+              
+              for(let d = 0; d < periodDays && (lastIdx - d) >= 0; d++){
+                const dateKey = data.allDates[lastIdx - d];
+                if(data.trafficByDate[dateKey] && data.trafficByDate[dateKey][countryIndex] !== undefined){
+                  currentSum += data.trafficByDate[dateKey][countryIndex];
+                }
               }
+              for(let d = periodDays; d < periodDays * 2 && (lastIdx - d) >= 0; d++){
+                const dateKey = data.allDates[lastIdx - d];
+                if(data.trafficByDate[dateKey] && data.trafficByDate[dateKey][countryIndex] !== undefined){
+                  prevSum += data.trafficByDate[dateKey][countryIndex];
+                }
+              }
+              
+              if(prevSum > 0) compareValue = prevSum;
+              if(currentSum > 0) lastTrafficForCalc = currentSum;
             }
             break;
           case 'MoM':
-            compareDateObj.setMonth(compareDateObj.getMonth() - 1);
-            const momDate = `${compareDateObj.getFullYear()}-${String(compareDateObj.getMonth()+1).padStart(2,'0')}-${String(compareDateObj.getDate()).padStart(2,'0')}`;
-            const momDates = data.allDates.filter(d => {
-              const dObj = new Date(d);
-              const diff = Math.abs((dObj - compareDateObj) / (1000 * 60 * 60 * 24));
-              return diff <= 3;
-            });
-            if(momDates.length > 0){
-              const closestDate = momDates.sort((a,b) => {
-                const aDiff = Math.abs((new Date(a) - compareDateObj) / (1000 * 60 * 60 * 24));
-                const bDiff = Math.abs((new Date(b) - compareDateObj) / (1000 * 60 * 60 * 24));
-                return aDiff - bDiff;
-              })[0];
-              if(data.trafficByDate[closestDate] && data.trafficByDate[closestDate][countryIndex] !== undefined){
-                compareValue = data.trafficByDate[closestDate][countryIndex];
+            // Month over Month: 최근 30일 합계 vs 이전 30일 합계
+            {
+              const periodDays = 30;
+              let currentSum = 0, prevSum = 0;
+              const lastIdx = data.allDates.length - 1;
+              
+              for(let d = 0; d < periodDays && (lastIdx - d) >= 0; d++){
+                const dateKey = data.allDates[lastIdx - d];
+                if(data.trafficByDate[dateKey] && data.trafficByDate[dateKey][countryIndex] !== undefined){
+                  currentSum += data.trafficByDate[dateKey][countryIndex];
+                }
               }
+              for(let d = periodDays; d < periodDays * 2 && (lastIdx - d) >= 0; d++){
+                const dateKey = data.allDates[lastIdx - d];
+                if(data.trafficByDate[dateKey] && data.trafficByDate[dateKey][countryIndex] !== undefined){
+                  prevSum += data.trafficByDate[dateKey][countryIndex];
+                }
+              }
+              
+              if(prevSum > 0) compareValue = prevSum;
+              if(currentSum > 0) lastTrafficForCalc = currentSum;
+            }
+            break;
+          case 'QoQ':
+            // Quarter over Quarter: 최근 90일 합계 vs 이전 90일 합계
+            {
+              const periodDays = 90;
+              let currentSum = 0, prevSum = 0;
+              const lastIdx = data.allDates.length - 1;
+              
+              for(let d = 0; d < periodDays && (lastIdx - d) >= 0; d++){
+                const dateKey = data.allDates[lastIdx - d];
+                if(data.trafficByDate[dateKey] && data.trafficByDate[dateKey][countryIndex] !== undefined){
+                  currentSum += data.trafficByDate[dateKey][countryIndex];
+                }
+              }
+              for(let d = periodDays; d < periodDays * 2 && (lastIdx - d) >= 0; d++){
+                const dateKey = data.allDates[lastIdx - d];
+                if(data.trafficByDate[dateKey] && data.trafficByDate[dateKey][countryIndex] !== undefined){
+                  prevSum += data.trafficByDate[dateKey][countryIndex];
+                }
+              }
+              
+              if(prevSum > 0) compareValue = prevSum;
+              if(currentSum > 0) lastTrafficForCalc = currentSum;
             }
             break;
           case 'YoY':
@@ -1761,8 +1796,8 @@
         }
       }
       
-      const change = (compareValue !== null && compareValue > 0 && lastTraffic > 0) 
-        ? ((lastTraffic - compareValue) / compareValue) * 100 
+      const change = (compareValue !== null && compareValue > 0 && lastTrafficForCalc > 0) 
+        ? ((lastTrafficForCalc - compareValue) / compareValue) * 100 
         : 0;
       const continent = getContinent(country);
       
