@@ -1669,19 +1669,20 @@
     }
 
     function showCountryDetail(data, country){
-      const countryIndex = data.Country.indexOf(country);
+      // countryDataMap 사용 (인덱스 불일치 방지)
+      const countryData = data.countryDataMap ? data.countryDataMap[country] : null;
       
-      if(countryIndex === -1) return;
+      if(!countryData) return;
       
       const comparisonType = document.getElementById('comparisonType').value || 'DoD';
-      const lastDate = data.lastDate;
       const lastDateIndex = data.allDates.length - 1;
-      const lastTraffic = (data.trafficByDate[data.allDates[lastDateIndex]] && data.trafficByDate[data.allDates[lastDateIndex]][countryIndex]) || 0;
+      const lastDateKey = data.allDates[lastDateIndex];
+      const lastTraffic = countryData[lastDateKey] || 0;
       let lastTrafficForCalc = lastTraffic; // WoW/MoM/QoQ에서 기간 합계로 변경됨
       
       // Calculate change
       let compareValue = null;
-      const lastDateObj = new Date(data.allDates[lastDateIndex]);
+      const lastDateObj = new Date(lastDateKey);
       
       if(!isNaN(lastDateObj)){
         const compareDateObj = new Date(lastDateObj);
@@ -1691,15 +1692,15 @@
             // 전일 대비 (마지막 날 vs 전날)
             if(data.allDates.length > 1){
               const prevDayDate = data.allDates[data.allDates.length - 2];
-              if(data.trafficByDate[prevDayDate] && data.trafficByDate[prevDayDate][countryIndex] !== undefined){
-                compareValue = data.trafficByDate[prevDayDate][countryIndex];
+              if(countryData[prevDayDate] !== undefined){
+                compareValue = countryData[prevDayDate];
               }
             }
             break;
           case 'Period':
             // 기간 전체 (마지막 날 vs 첫날)
-            if(data.allDates.length > 0 && data.trafficByDate[data.allDates[0]] && data.trafficByDate[data.allDates[0]][countryIndex] !== undefined){
-              compareValue = data.trafficByDate[data.allDates[0]][countryIndex];
+            if(data.allDates.length > 0 && countryData[data.allDates[0]] !== undefined){
+              compareValue = countryData[data.allDates[0]];
             }
             break;
           case 'WoW':
@@ -1711,14 +1712,14 @@
               
               for(let d = 0; d < periodDays && (lastIdx - d) >= 0; d++){
                 const dateKey = data.allDates[lastIdx - d];
-                if(data.trafficByDate[dateKey] && data.trafficByDate[dateKey][countryIndex] !== undefined){
-                  currentSum += data.trafficByDate[dateKey][countryIndex];
+                if(countryData[dateKey] !== undefined){
+                  currentSum += countryData[dateKey];
                 }
               }
               for(let d = periodDays; d < periodDays * 2 && (lastIdx - d) >= 0; d++){
                 const dateKey = data.allDates[lastIdx - d];
-                if(data.trafficByDate[dateKey] && data.trafficByDate[dateKey][countryIndex] !== undefined){
-                  prevSum += data.trafficByDate[dateKey][countryIndex];
+                if(countryData[dateKey] !== undefined){
+                  prevSum += countryData[dateKey];
                 }
               }
               
@@ -1735,14 +1736,14 @@
               
               for(let d = 0; d < periodDays && (lastIdx - d) >= 0; d++){
                 const dateKey = data.allDates[lastIdx - d];
-                if(data.trafficByDate[dateKey] && data.trafficByDate[dateKey][countryIndex] !== undefined){
-                  currentSum += data.trafficByDate[dateKey][countryIndex];
+                if(countryData[dateKey] !== undefined){
+                  currentSum += countryData[dateKey];
                 }
               }
               for(let d = periodDays; d < periodDays * 2 && (lastIdx - d) >= 0; d++){
                 const dateKey = data.allDates[lastIdx - d];
-                if(data.trafficByDate[dateKey] && data.trafficByDate[dateKey][countryIndex] !== undefined){
-                  prevSum += data.trafficByDate[dateKey][countryIndex];
+                if(countryData[dateKey] !== undefined){
+                  prevSum += countryData[dateKey];
                 }
               }
               
@@ -1759,14 +1760,14 @@
               
               for(let d = 0; d < periodDays && (lastIdx - d) >= 0; d++){
                 const dateKey = data.allDates[lastIdx - d];
-                if(data.trafficByDate[dateKey] && data.trafficByDate[dateKey][countryIndex] !== undefined){
-                  currentSum += data.trafficByDate[dateKey][countryIndex];
+                if(countryData[dateKey] !== undefined){
+                  currentSum += countryData[dateKey];
                 }
               }
               for(let d = periodDays; d < periodDays * 2 && (lastIdx - d) >= 0; d++){
                 const dateKey = data.allDates[lastIdx - d];
-                if(data.trafficByDate[dateKey] && data.trafficByDate[dateKey][countryIndex] !== undefined){
-                  prevSum += data.trafficByDate[dateKey][countryIndex];
+                if(countryData[dateKey] !== undefined){
+                  prevSum += countryData[dateKey];
                 }
               }
               
@@ -1776,7 +1777,6 @@
             break;
           case 'YoY':
             compareDateObj.setFullYear(compareDateObj.getFullYear() - 1);
-            const yoyDate = `${compareDateObj.getFullYear()}-${String(compareDateObj.getMonth()+1).padStart(2,'0')}-${String(compareDateObj.getDate()).padStart(2,'0')}`;
             const yoyDates = data.allDates.filter(d => {
               const dObj = new Date(d);
               const diff = Math.abs((dObj - compareDateObj) / (1000 * 60 * 60 * 24));
@@ -1788,8 +1788,8 @@
                 const bDiff = Math.abs((new Date(b) - compareDateObj) / (1000 * 60 * 60 * 24));
                 return aDiff - bDiff;
               })[0];
-              if(data.trafficByDate[closestDate] && data.trafficByDate[closestDate][countryIndex] !== undefined){
-                compareValue = data.trafficByDate[closestDate][countryIndex];
+              if(countryData[closestDate] !== undefined){
+                compareValue = countryData[closestDate];
               }
             }
             break;
@@ -1801,14 +1801,13 @@
         : 0;
       const continent = getContinent(country);
       
-      // Get traffic history
+      // Get traffic history (countryDataMap 사용)
       const trafficHistory = [];
-      const dates = data.allDates;
-      dates.forEach((date) => {
-        if(data.trafficByDate[date] && data.trafficByDate[date][countryIndex] !== undefined){
+      data.allDates.forEach((date) => {
+        if(countryData[date] !== undefined){
           trafficHistory.push({
             date: date,
-            traffic: data.trafficByDate[date][countryIndex]
+            traffic: countryData[date]
           });
         }
       });
