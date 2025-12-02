@@ -146,6 +146,9 @@
         </label>
         <button id="btnApplyDateRange" style="padding:6px 12px;background:linear-gradient(135deg,#238636,#2ea043);border:none;border-radius:6px;color:#fff;font-weight:600;cursor:pointer;font-size:12px">Apply</button>
         <button id="btnClearDateRange" style="padding:6px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:#fff;font-weight:600;cursor:pointer;font-size:12px">Clear</button>
+        <span id="dateRangeIndicator" style="display:none;margin-left:16px;padding:6px 12px;background:rgba(35,134,54,0.15);border:1px solid rgba(35,134,54,0.3);border-radius:6px;font-size:12px;color:#2ed573">
+          📅 <span id="dateRangeText"></span>
+        </span>
       </div>
         </div>
         
@@ -613,6 +616,16 @@
       if(p){
         currentData = p;
         document.getElementById('status').textContent = `CSV Loaded (${filteredRows.length} rows, ${startDate} ~ ${endDate})`;
+        
+        // Date Range 표시 업데이트
+        const indicator = document.getElementById('dateRangeIndicator');
+        const rangeText = document.getElementById('dateRangeText');
+        if(indicator && rangeText){
+          const daysDiff = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+          rangeText.textContent = `${startDate} ~ ${endDate} (${daysDiff}일)`;
+          indicator.style.display = 'inline-block';
+        }
+        
         createTreemap(currentData);
         // Update other tabs if they are active
         if(document.getElementById('tab-risers-fallers').classList.contains('active')){
@@ -631,11 +644,16 @@
     document.getElementById('btnClearDateRange').addEventListener('click', ()=>{
       document.getElementById('startDate').value = '';
       document.getElementById('endDate').value = '';
+      
+      // Date Range 표시 숨기기
+      const indicator = document.getElementById('dateRangeIndicator');
+      if(indicator) indicator.style.display = 'none';
+      
       if(rawCsvRows && rawCsvRows.length > 0){
         const p = processData(rawCsvRows);
         if(p){
           currentData = p;
-          document.getElementById('status').textContent = 'CSV Loaded';
+          document.getElementById('status').textContent = 'CSV Loaded (All data)';
           createTreemap(currentData);
           // Update other tabs if they are active
           if(document.getElementById('tab-risers-fallers').classList.contains('active')){
@@ -1234,11 +1252,14 @@
       if(!quickSelect) return;
       
       const stats = calculateStats(data);
-      const top10 = stats.topCountries.slice(0, 10);
       
-      quickSelect.innerHTML = top10.map((country, idx) => {
-        const traffic = stats.topRevenue[idx];
-        const change = stats.topChange[idx];
+      // 항상 트래픽 기준 Top 10 사용 (Sort By 옵션과 무관하게)
+      const trafficTop10 = stats.trafficTop10 || [];
+      
+      quickSelect.innerHTML = trafficTop10.map((item, idx) => {
+        const country = item.country;
+        const traffic = item.traffic;
+        const change = item.change;
         const changeColor = change >= 0 ? '#00ff00' : '#ff4d4d';
         const changeSign = change >= 0 ? '+' : '';
         
