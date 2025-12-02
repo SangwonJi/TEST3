@@ -48,6 +48,9 @@ EXCLUDE_KEYWORDS = [
     'PPP', '국민의힘', '더불어민주당', '민주당', '국회',
     'court hearing', '법원', '재판', '탄핵', 'Choo Kyung-ho',
     '추경호', '이재명', '윤석열', '한동훈', 'impeachment',
+    # 한국 관련 (글로벌 관점에서 제외)
+    '한국', 'South Korea', 'Korea', '북한', 'North Korea',
+    '서울', 'Seoul', '네이트', 'nate.com',
     # 광고/마케팅
     '광고', '협찬', '마케팅', '캠페인', 'campaign', '프로모션',
     'sponsored', 'sponsorship', 'PPL', '보도자료',

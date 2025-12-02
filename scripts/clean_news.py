@@ -40,6 +40,11 @@ EXCLUDE_KEYWORDS = [
     'Choo Kyung-ho', '추경호', '이재명', '윤석열', '한동훈',
     'National Assembly', 'impeachment', 'legislature',
     
+    # ========== 한국 관련 (글로벌 관점에서 제외) ==========
+    '한국', 'South Korea', 'Korea', '북한', 'North Korea',
+    '서울', 'Seoul', '부산', '대구', '인천',
+    '네이트', 'nate.com',
+    
     # ========== 스포츠 (e스포츠/월드컵/올림픽 제외) ==========
     # ※ KT 위즈만 제외 (KT 통신장애는 살려야 함!)
     'KT 위즈', 'kt wiz', 'KT위즈',
