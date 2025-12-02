@@ -131,11 +131,13 @@
       <label><input type="checkbox" id="groupByContinent" checked/> <strong>Group by Sector (Continent)</strong></label>
       <label style="margin-top:8px"><strong>Comparison:</strong>
         <select id="comparisonType" style="padding:6px 10px;border:1px solid var(--border);background:var(--bg);color:#fff;border-radius:6px;margin-left:8px;font-size:13px">
-          <option value="DoD" selected>DoD (Day over Day)</option>
-          <option value="WoW">WoW (Week over Week)</option>
-          <option value="MoM">MoM (Month over Month)</option>
-          <option value="YoY">YoY (Year over Year)</option>
+          <option value="DoD" selected>DoD (전일 대비)</option>
+          <option value="WoW">WoW (전주 대비)</option>
+          <option value="MoM">MoM (전월 대비)</option>
+          <option value="YoY">YoY (전년 대비)</option>
+          <option value="Period">Period (기간 전체)</option>
         </select>
+        <span id="comparisonInfo" style="margin-left:8px;font-size:11px;color:var(--muted)"></span>
       </label>
       <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:8px;padding-top:12px;border-top:1px solid var(--border)">
         <label><strong>Date Range:</strong> 
@@ -797,11 +799,21 @@
           
           switch(comparisonType){
             case 'DoD':
-              // Day over Day: 첫 날과 마지막 날
+              // Day over Day: 전일 대비 (마지막 날 vs 전날)
+              if(allDates.length > 1){
+                const prevDayDate = allDates[allDates.length - 2]; // 전날
+                if(trafficByDate[prevDayDate] && trafficByDate[prevDayDate][i] !== undefined){
+                  compareValue = trafficByDate[prevDayDate][i];
+                }
+              }
+              break;
+              
+            case 'Period':
+              // Period: 기간 전체 변화 (마지막 날 vs 첫날)
               if(allDates.length > 0){
-                const firstDate = new Date(allDates[0]);
-                if(!isNaN(firstDate) && trafficByDate[allDates[0]] && trafficByDate[allDates[0]][i] !== undefined){
-                  compareValue = trafficByDate[allDates[0]][i];
+                const firstDate = allDates[0];
+                if(trafficByDate[firstDate] && trafficByDate[firstDate][i] !== undefined){
+                  compareValue = trafficByDate[firstDate][i];
                 }
               }
               break;
@@ -944,6 +956,46 @@
         const stats=calculateStats(data);
         const topN=+document.getElementById('topCount').value || 180;
         const groupBy=document.getElementById('groupByContinent').checked;
+        const comparisonType = document.getElementById('comparisonType').value || 'DoD';
+        
+        // 비교 기준 정보 업데이트
+        const comparisonInfo = document.getElementById('comparisonInfo');
+        if(comparisonInfo && data.allDates && data.allDates.length > 0){
+          const lastDate = data.allDates[data.allDates.length - 1];
+          const firstDate = data.allDates[0];
+          const prevDate = data.allDates.length > 1 ? data.allDates[data.allDates.length - 2] : firstDate;
+          
+          const formatDate = (d) => {
+            const date = new Date(d);
+            return `${date.getMonth()+1}/${date.getDate()}`;
+          };
+          
+          let infoText = '';
+          switch(comparisonType){
+            case 'DoD':
+              infoText = `📊 ${formatDate(prevDate)} → ${formatDate(lastDate)}`;
+              break;
+            case 'WoW':
+              const weekAgo = new Date(lastDate);
+              weekAgo.setDate(weekAgo.getDate() - 7);
+              infoText = `📊 ${formatDate(weekAgo)} → ${formatDate(lastDate)}`;
+              break;
+            case 'MoM':
+              const monthAgo = new Date(lastDate);
+              monthAgo.setMonth(monthAgo.getMonth() - 1);
+              infoText = `📊 ${formatDate(monthAgo)} → ${formatDate(lastDate)}`;
+              break;
+            case 'YoY':
+              const yearAgo = new Date(lastDate);
+              yearAgo.setFullYear(yearAgo.getFullYear() - 1);
+              infoText = `📊 ${formatDate(yearAgo)} → ${formatDate(lastDate)}`;
+              break;
+            case 'Period':
+              infoText = `📊 ${formatDate(firstDate)} → ${formatDate(lastDate)} (전체)`;
+              break;
+          }
+          comparisonInfo.textContent = infoText;
+        }
 
         // KPIs
         document.getElementById('stats').innerHTML = `
@@ -1402,6 +1454,16 @@
         
         switch(comparisonType){
           case 'DoD':
+            // 전일 대비 (마지막 날 vs 전날)
+            if(data.allDates.length > 1){
+              const prevDayDate = data.allDates[data.allDates.length - 2];
+              if(data.trafficByDate[prevDayDate] && data.trafficByDate[prevDayDate][countryIndex] !== undefined){
+                compareValue = data.trafficByDate[prevDayDate][countryIndex];
+              }
+            }
+            break;
+          case 'Period':
+            // 기간 전체 (마지막 날 vs 첫날)
             if(data.allDates.length > 0 && data.trafficByDate[data.allDates[0]] && data.trafficByDate[data.allDates[0]][countryIndex] !== undefined){
               compareValue = data.trafficByDate[data.allDates[0]][countryIndex];
             }
