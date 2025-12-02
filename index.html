@@ -794,7 +794,8 @@
           const lastDate = sortedDates.length > 0 ? sortedDates[sortedDates.length - 1] : null;
           
           if(!c.length){ alert('No valid data found. Need at least 2 days of data for each country.'); return null; }
-          return {Country:c, allDates:sortedDates, trafficByDate:trafficByDate, lastDate:lastDate};
+          // countryDataMap을 포함시켜 나중에 국가 이름으로 직접 접근 가능하게 함
+          return {Country:c, allDates:sortedDates, trafficByDate:trafficByDate, lastDate:lastDate, countryDataMap:countryDataMap};
         }
         
         alert('Unsupported CSV format. Required: Date,Country,Traffic (or 날짜,국가,트래픽)\n날짜는 중구난방으로 있어도 나라별로 자동 피벗하여 처리됩니다.');
@@ -952,57 +953,43 @@
       const maxChangeCountry = topCountries[maxChangeIdx] || '';
       const minChangeCountry = topCountries[minChangeIdx] || '';
       
-      // Traffic Top 10 (DoD 기준 마지막 날 트래픽)
+      // Traffic Top 10 (마지막 날 트래픽 기준) - countryDataMap에서 직접 가져옴
       const allCountries = data.Country;
-      const allLastDayTraffic = total.map(v => Number(v) || 0);
-      
-      // 디버깅: 핵심 정보 확인
-      console.log('=== Traffic Top 10 Debug ===');
-      console.log('Total countries:', allCountries.length);
-      console.log('Last date:', data.allDates[data.allDates.length - 1]);
-      console.log('trafficByDate keys (last 3):', data.allDates.slice(-3));
-      
-      // trafficByDate의 마지막 날 데이터 직접 확인
       const lastDateKey = data.allDates[data.allDates.length - 1];
-      const lastDayData = data.trafficByDate[lastDateKey];
-      console.log('lastDayData length:', lastDayData ? lastDayData.length : 'undefined');
-      console.log('lastDayData sample (first 5):', lastDayData ? lastDayData.slice(0, 5) : 'N/A');
-      console.log('lastDayData sample (last 5):', lastDayData ? lastDayData.slice(-5) : 'N/A');
       
-      // 국가 목록 확인
-      console.log('Countries (first 5):', allCountries.slice(0, 5));
-      console.log('Countries (last 5):', allCountries.slice(-5));
+      // countryDataMap에서 직접 마지막 날 트래픽 가져오기 (인덱스 의존성 제거!)
+      const countryTrafficMap = {};
+      allCountries.forEach((country, idx) => {
+        // countryDataMap이 있으면 직접 사용, 없으면 기존 total 사용
+        if(data.countryDataMap && data.countryDataMap[country] && data.countryDataMap[country][lastDateKey] !== undefined) {
+          countryTrafficMap[country] = {
+            traffic: Number(data.countryDataMap[country][lastDateKey]) || 0,
+            change: change[idx],
+            index: idx
+          };
+        } else {
+          countryTrafficMap[country] = {
+            traffic: Number(total[idx]) || 0,
+            change: change[idx],
+            index: idx
+          };
+        }
+      });
       
-      // 비교: total vs lastDayData
-      console.log('total (first 5):', total.slice(0, 5));
-      console.log('total (last 5):', total.slice(-5));
-      
-      // United States 찾기
-      const usIndex = allCountries.findIndex(c => c === 'United States' || c.includes('United States'));
-      if(usIndex >= 0) {
-        console.log(`United States (idx ${usIndex}): total=${total[usIndex]}, lastDayData=${lastDayData ? lastDayData[usIndex] : 'N/A'}`);
-      }
-      
-      // 马约特 찾기
-      const mayotteIndex = allCountries.findIndex(c => c === '马约特' || c.includes('马约特'));
-      if(mayotteIndex >= 0) {
-        console.log(`马约特 (idx ${mayotteIndex}): total=${total[mayotteIndex]}, lastDayData=${lastDayData ? lastDayData[mayotteIndex] : 'N/A'}`);
-      }
-      
-      // 가장 큰 트래픽 값 찾기
-      const maxTrafficIdx = total.indexOf(Math.max(...total));
-      console.log(`Max traffic: ${allCountries[maxTrafficIdx]} (idx ${maxTrafficIdx}) = ${total[maxTrafficIdx]}`);
-      
-      const trafficTop10 = Array.from({length:allCountries.length},(_,i)=>i)
-        .sort((a,b)=> allLastDayTraffic[b] - allLastDayTraffic[a])
-        .slice(0,10)
-        .map(i=>({
-          country: allCountries[i],
-          traffic: allLastDayTraffic[i],
-          change: change[i]
+      // 트래픽 기준 Top 10 (국가 이름으로 정렬, 인덱스 무관!)
+      const trafficTop10 = Object.entries(countryTrafficMap)
+        .sort((a, b) => b[1].traffic - a[1].traffic)
+        .slice(0, 10)
+        .map(([country, data]) => ({
+          country: country,
+          traffic: data.traffic,
+          change: data.change
         }));
       
-      console.log('Traffic Top 10 result:', trafficTop10.map(t => `${t.country}: ${t.traffic}`));
+      // 디버깅 로그 (간소화)
+      console.log('=== Traffic Top 10 (Fixed) ===');
+      console.log('Last date:', lastDateKey);
+      console.log('Top 10:', trafficTop10.map(t => `${t.country}: ${t.traffic.toLocaleString()}`));
       
       return {topCountries, topRevenue, topChange, totalSum, avgChange,
               maxChange:Math.max(...topChange), minChange:Math.min(...topChange),
