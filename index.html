@@ -143,21 +143,14 @@
       </label>
       <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:12px">
         <label><strong>Date Range:</strong></label>
-        <!-- 프리셋 버튼 -->
-        <div style="display:flex;gap:4px" id="datePresetButtons">
-          <button onclick="setDatePreset(7)" class="date-preset-btn" data-days="7" style="padding:6px 12px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;cursor:pointer;transition:all 0.2s">7일</button>
-          <button onclick="setDatePreset(30)" class="date-preset-btn" data-days="30" style="padding:6px 12px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;cursor:pointer;transition:all 0.2s">30일</button>
-          <button onclick="setDatePreset(90)" class="date-preset-btn" data-days="90" style="padding:6px 12px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;cursor:pointer;transition:all 0.2s">90일</button>
-          <button onclick="setDatePreset(0)" class="date-preset-btn active" data-days="0" style="padding:6px 12px;background:var(--accent);border:1px solid var(--accent);border-radius:4px;color:white;font-size:12px;cursor:pointer;transition:all 0.2s">전체</button>
-        </div>
-        <span id="dateRangeIndicator" style="margin-left:8px;padding:6px 12px;background:rgba(35,134,54,0.1);border-radius:6px;font-size:12px;color:var(--muted)">
-          📅 <span id="dateRangeText">전체 데이터</span>
+        <input type="date" id="startDate" style="padding:6px 10px;border:1px solid var(--border);background:var(--bg);color:#fff;border-radius:6px"/>
+        <span style="color:var(--muted)">~</span>
+        <input type="date" id="endDate" style="padding:6px 10px;border:1px solid var(--border);background:var(--bg);color:#fff;border-radius:6px"/>
+        <button id="btnApplyDateRange" style="padding:6px 12px;background:linear-gradient(135deg,#238636,#2ea043);border:none;border-radius:6px;color:#fff;font-weight:600;cursor:pointer;font-size:12px">Apply</button>
+        <button id="btnClearDateRange" style="padding:6px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:#fff;font-weight:600;cursor:pointer;font-size:12px">Clear</button>
+        <span id="dateRangeIndicator" style="display:none;margin-left:8px;padding:6px 12px;background:rgba(35,134,54,0.15);border:1px solid rgba(35,134,54,0.3);border-radius:6px;font-size:12px;color:#2ed573">
+          📅 <span id="dateRangeText"></span>
         </span>
-        <!-- 숨겨진 날짜 입력 (내부 로직용) -->
-        <input type="date" id="startDate" style="display:none"/>
-        <input type="date" id="endDate" style="display:none"/>
-        <button id="btnApplyDateRange" style="display:none"></button>
-        <button id="btnClearDateRange" style="display:none"></button>
       </div>
         </div>
         
@@ -580,82 +573,8 @@
       });
     });
     
-    // 날짜 프리셋 버튼 기능
-    let currentPresetDays = 0; // 현재 선택된 프리셋
-    
-    function setDatePreset(days) {
-      if(!rawCsvRows || rawCsvRows.length === 0){
-        alert('Please load CSV file first.');
-        return;
-      }
-      
-      currentPresetDays = days;
-      
-      // 버튼 스타일 업데이트
-      document.querySelectorAll('.date-preset-btn').forEach(btn => {
-        const btnDays = parseInt(btn.getAttribute('data-days'));
-        if(btnDays === days) {
-          btn.style.background = 'var(--accent)';
-          btn.style.borderColor = 'var(--accent)';
-          btn.style.color = 'white';
-        } else {
-          btn.style.background = 'var(--bg)';
-          btn.style.borderColor = 'var(--border)';
-          btn.style.color = 'var(--text)';
-        }
-      });
-      
-      if(days === 0) {
-        // 전체 데이터
-        clearDateRangeFilter();
-        updateDateRangeText('전체 데이터');
-        return;
-      }
-      
-      // 현재 데이터의 마지막 날짜 찾기
-      const allKeys = rawCsvRows[0] ? Object.keys(rawCsvRows[0]) : [];
-      const findColumn = (keys, names) => names.find(n => keys.some(k => k.toLowerCase() === n.toLowerCase())) || names.find(n => keys.some(k => k.toLowerCase().includes(n.toLowerCase())));
-      const dateCol = findColumn(allKeys, ['Date', 'date', '날짜', '일자']);
-      
-      if(!dateCol) return;
-      
-      // 모든 날짜 수집 및 정렬
-      const dates = rawCsvRows.map(r => {
-        let d = r[dateCol];
-        if(!d) return null;
-        d = d.toString().trim().replace(/\./g, '-').replace(/\s+/g, '').replace(/-+/g, '-').replace(/^-+|-+$/g, '');
-        const parts = d.split('-');
-        if(parts.length >= 3) {
-          return new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
-        }
-        return null;
-      }).filter(d => d && !isNaN(d));
-      
-      if(dates.length === 0) return;
-      
-      const maxDate = new Date(Math.max(...dates));
-      const minDate = new Date(maxDate);
-      minDate.setDate(minDate.getDate() - days + 1);
-      
-      // 날짜 입력 설정
-      document.getElementById('startDate').value = minDate.toISOString().split('T')[0];
-      document.getElementById('endDate').value = maxDate.toISOString().split('T')[0];
-      
-      // 날짜 범위 표시 업데이트
-      const formatDate = (d) => `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
-      updateDateRangeText(`${formatDate(minDate)} ~ ${formatDate(maxDate)} (${days}일)`);
-      
-      // 직접 날짜 필터 적용
-      applyDateRangeFilter();
-    }
-    
-    function updateDateRangeText(text) {
-      const rangeText = document.getElementById('dateRangeText');
-      if(rangeText) rangeText.textContent = text;
-    }
-    
-    // 날짜 범위 필터 적용 함수
-    function applyDateRangeFilter() {
+    // 날짜 범위 필터 적용
+    document.getElementById('btnApplyDateRange').addEventListener('click', ()=>{
       if(!rawCsvRows || rawCsvRows.length === 0){
         console.log('No CSV data');
         return;
@@ -758,12 +677,16 @@
           loadNewsFromCSV();
         }
       }
-    }
+    });
     
-    // 날짜 범위 필터 초기화 함수
-    function clearDateRangeFilter() {
+    // 날짜 범위 필터 초기화
+    document.getElementById('btnClearDateRange').addEventListener('click', ()=>{
       document.getElementById('startDate').value = '';
       document.getElementById('endDate').value = '';
+      
+      // Date Range 표시 숨기기
+      const indicator = document.getElementById('dateRangeIndicator');
+      if(indicator) indicator.style.display = 'none';
       
       if(rawCsvRows && rawCsvRows.length > 0){
         const p = processData(rawCsvRows);
@@ -780,12 +703,6 @@
           }
         }
       }
-    }
-    
-    // 날짜 범위 필터 초기화 (버튼용)
-    document.getElementById('btnClearDateRange').addEventListener('click', ()=>{
-      clearDateRangeFilter();
-      updateDateRangeText('전체 데이터');
     });
 
     function processData(rows){
