@@ -957,26 +957,24 @@
       const allCountries = data.Country;
       const lastDateKey = data.allDates[data.allDates.length - 1];
       
-      // countryDataMap에서 직접 마지막 날 트래픽 가져오기 (인덱스 의존성 제거!)
+      // countryDataMap에서 직접 마지막 날 트래픽 가져오기
+      // 중요: 마지막 날짜에 데이터가 있는 국가만 포함!
       const countryTrafficMap = {};
       allCountries.forEach((country, idx) => {
-        // countryDataMap이 있으면 직접 사용, 없으면 기존 total 사용
         if(data.countryDataMap && data.countryDataMap[country] && data.countryDataMap[country][lastDateKey] !== undefined) {
-          countryTrafficMap[country] = {
-            traffic: Number(data.countryDataMap[country][lastDateKey]) || 0,
-            change: change[idx],
-            index: idx
-          };
-        } else {
-          countryTrafficMap[country] = {
-            traffic: Number(total[idx]) || 0,
-            change: change[idx],
-            index: idx
-          };
+          // 마지막 날짜에 실제 데이터가 있는 경우만 포함
+          const trafficValue = Number(data.countryDataMap[country][lastDateKey]) || 0;
+          if(trafficValue > 0) { // 0보다 큰 경우만
+            countryTrafficMap[country] = {
+              traffic: trafficValue,
+              change: change[idx],
+              index: idx
+            };
+          }
         }
       });
       
-      // 트래픽 기준 Top 10 (국가 이름으로 정렬, 인덱스 무관!)
+      // 트래픽 기준 Top 10 (마지막 날짜에 데이터가 있는 국가만!)
       const trafficTop10 = Object.entries(countryTrafficMap)
         .sort((a, b) => b[1].traffic - a[1].traffic)
         .slice(0, 10)
@@ -986,9 +984,10 @@
           change: data.change
         }));
       
-      // 디버깅 로그 (간소화)
-      console.log('=== Traffic Top 10 (Fixed) ===');
+      // 디버깅 로그
+      console.log('=== Traffic Top 10 (Fixed v2) ===');
       console.log('Last date:', lastDateKey);
+      console.log('Countries with data on last date:', Object.keys(countryTrafficMap).length);
       console.log('Top 10:', trafficTop10.map(t => `${t.country}: ${t.traffic.toLocaleString()}`));
       
       return {topCountries, topRevenue, topChange, totalSum, avgChange,
