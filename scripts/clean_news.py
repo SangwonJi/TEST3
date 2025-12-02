@@ -103,13 +103,29 @@ EXCLUDE_KEYWORDS = [
     '대통령', '국회', '외교부', '장관', '정상회담',
 ]
 
-# 반드시 포함해야 하는 게임 키워드 (게임 뉴스용)
+# 반드시 포함해야 하는 게임 키워드 (PUBGM 관련/경쟁 게임만)
 GAMING_REQUIRED = [
+    # PUBG 직접 관련
     'pubg', '펍지', '배틀그라운드', 'krafton', '크래프톤', 'bgmi',
-    'free fire', '프리파이어', 'call of duty', '콜오브듀티',
-    'mobile game', '모바일 게임', '모바일게임',
-    'esports', 'e-sports', '이스포츠', 'pmgc', 'pmpl',
-    '게임 업데이트', '게임 패치', '게임 대회'
+    'pmgc', 'pmpl', 'pcs', 'pgc',  # PUBG 대회
+    
+    # 장르 (FPS/슈터/배틀로얄)
+    'fps', 'fps게임', 'fps 게임', '슈터', 'shooter', 
+    '배틀로얄', 'battle royale', '배틀 로얄',
+    
+    # 경쟁 모바일 게임
+    'free fire', '프리파이어', '가레나', 'garena',
+    'call of duty mobile', 'cod mobile', '콜오브듀티 모바일',
+    'apex legends mobile', '에이펙스 레전드 모바일',
+    'fortnite mobile', '포트나이트 모바일',
+    
+    # 경쟁 플랫폼/게임
+    'roblox', '로블록스',
+    'fortnite', '포트나이트',
+    'apex legends', '에이펙스 레전드', '에이펙스',
+    
+    # 모바일 게임 e스포츠
+    'mobile esports', '모바일 e스포츠', '모바일 이스포츠'
 ]
 
 # 트래픽 영향 키워드 (트래픽 뉴스용)
