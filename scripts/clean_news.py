@@ -40,7 +40,15 @@ EXCLUDE_KEYWORDS = [
     '구원투수', '스토브리그', 'WAR 전체', 'xportsnews',
     '프로축구', '프로야구', 'NBA', 'MLB',
     '야구 결과', '축구 결과', '경기 결과',
+    # 배구
+    'Spike War', '스파이크 워', '배구', 'volleyball', '발리볼',
+    "Kim Yo-han's serve", '서브 리시브', 'receive log',
+    'V리그', 'V-League',
     # ※ FIFA/월드컵/올림픽은 트래픽 영향 있으므로 제외하지 않음!
+    
+    # ========== 사이버보안/APT (게임 서버 공격 아닌 것) ==========
+    'APT Attacks', 'APT 공격', 'Advanced Persistent Threat',
+    'North Korean APT', '북한 해커', '북한 해킹',
     
     # ========== 반도체/경제 (비유적 표현) ==========
     'Chip War', 'SK하이닉스', 'AI 거품론',
