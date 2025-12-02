@@ -44,6 +44,10 @@ EXCLUDE_KEYWORDS = [
     '열애설', '결별설', '스캔들', '영화제', '레드카펫',
     # 시위 - 구체적 케이스만 제외
     'immigration protest', 'hindu protest', 'farmer protest',
+    # 정치/법원
+    'PPP', '국민의힘', '더불어민주당', '민주당', '국회',
+    'court hearing', '법원', '재판', '탄핵', 'Choo Kyung-ho',
+    '추경호', '이재명', '윤석열', '한동훈', 'impeachment',
     # 광고/마케팅
     '광고', '협찬', '마케팅', '캠페인', 'campaign', '프로모션',
     'sponsored', 'sponsorship', 'PPL', '보도자료',

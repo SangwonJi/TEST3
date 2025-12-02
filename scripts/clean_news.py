@@ -34,6 +34,12 @@ EXCLUDE_KEYWORDS = [
     # ※ 일반 protest/시위는 트래픽 영향 있으므로 제외하지 않음!
     'immigration protest', 'hindu protest', 'farmer protest',
     
+    # ========== 정치/법원 ==========
+    'PPP', '국민의힘', '더불어민주당', '민주당', '국회',
+    'court hearing', '법원', '재판', '탄핵', '대통령',
+    'Choo Kyung-ho', '추경호', '이재명', '윤석열', '한동훈',
+    'National Assembly', 'impeachment', 'legislature',
+    
     # ========== 스포츠 (e스포츠/월드컵/올림픽 제외) ==========
     # ※ KT 위즈만 제외 (KT 통신장애는 살려야 함!)
     'KT 위즈', 'kt wiz', 'KT위즈',
