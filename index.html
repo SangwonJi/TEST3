@@ -132,23 +132,30 @@
       <label style="margin-top:8px"><strong>Comparison:</strong>
         <select id="comparisonType" style="padding:6px 10px;border:1px solid var(--border);background:var(--bg);color:#fff;border-radius:6px;margin-left:8px;font-size:13px">
           <option value="DoD" selected>DoD (전일 대비)</option>
-          <option value="WoW">WoW (전주 대비)</option>
-          <option value="MoM">MoM (전월 대비)</option>
-          <option value="YoY">YoY (전년 대비)</option>
+          <option value="WoW">WoW (주간 합계)</option>
+          <option value="MoM">MoM (월간 합계)</option>
+          <option value="QoQ">QoQ (분기 합계)</option>
+          <option value="YoY">YoY (전년 동일)</option>
           <option value="Period">Period (기간 전체)</option>
         </select>
         <span id="comparisonInfo" style="margin-left:8px;font-size:11px;color:var(--muted)"></span>
       </label>
       <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:8px;padding-top:12px;border-top:1px solid var(--border)">
-        <label><strong>Date Range:</strong> 
-          <input type="date" id="startDate" style="padding:6px 10px;border:1px solid var(--border);background:var(--bg);color:#fff;border-radius:6px;margin-left:8px"/>
-        </label>
-        <label><strong>~</strong> 
-          <input type="date" id="endDate" style="padding:6px 10px;border:1px solid var(--border);background:var(--bg);color:#fff;border-radius:6px;margin-left:8px"/>
-        </label>
+        <label><strong>Date Range:</strong></label>
+        <!-- 프리셋 버튼 -->
+        <div style="display:flex;gap:4px">
+          <button onclick="setDatePreset(7)" class="date-preset-btn" style="padding:4px 8px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;cursor:pointer">7일</button>
+          <button onclick="setDatePreset(30)" class="date-preset-btn" style="padding:4px 8px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;cursor:pointer">30일</button>
+          <button onclick="setDatePreset(90)" class="date-preset-btn" style="padding:4px 8px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;cursor:pointer">90일</button>
+          <button onclick="setDatePreset(0)" class="date-preset-btn" style="padding:4px 8px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;cursor:pointer">전체</button>
+        </div>
+        <span style="color:var(--muted)">|</span>
+        <input type="date" id="startDate" style="padding:6px 10px;border:1px solid var(--border);background:var(--bg);color:#fff;border-radius:6px"/>
+        <span style="color:var(--muted)">~</span>
+        <input type="date" id="endDate" style="padding:6px 10px;border:1px solid var(--border);background:var(--bg);color:#fff;border-radius:6px"/>
         <button id="btnApplyDateRange" style="padding:6px 12px;background:linear-gradient(135deg,#238636,#2ea043);border:none;border-radius:6px;color:#fff;font-weight:600;cursor:pointer;font-size:12px">Apply</button>
         <button id="btnClearDateRange" style="padding:6px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:#fff;font-weight:600;cursor:pointer;font-size:12px">Clear</button>
-        <span id="dateRangeIndicator" style="display:none;margin-left:16px;padding:6px 12px;background:rgba(35,134,54,0.15);border:1px solid rgba(35,134,54,0.3);border-radius:6px;font-size:12px;color:#2ed573">
+        <span id="dateRangeIndicator" style="display:none;margin-left:8px;padding:6px 12px;background:rgba(35,134,54,0.15);border:1px solid rgba(35,134,54,0.3);border-radius:6px;font-size:12px;color:#2ed573">
           📅 <span id="dateRangeText"></span>
         </span>
       </div>
@@ -573,6 +580,52 @@
       });
     });
     
+    // 날짜 프리셋 버튼 기능
+    function setDatePreset(days) {
+      if(!rawCsvRows || rawCsvRows.length === 0){
+        alert('Please load CSV file first.');
+        return;
+      }
+      
+      if(days === 0) {
+        // 전체 데이터
+        document.getElementById('btnClearDateRange').click();
+        return;
+      }
+      
+      // 현재 데이터의 마지막 날짜 찾기
+      const allKeys = rawCsvRows[0] ? Object.keys(rawCsvRows[0]) : [];
+      const findColumn = (keys, names) => names.find(n => keys.some(k => k.toLowerCase() === n.toLowerCase())) || names.find(n => keys.some(k => k.toLowerCase().includes(n.toLowerCase())));
+      const dateCol = findColumn(allKeys, ['Date', 'date', '날짜', '일자']);
+      
+      if(!dateCol) return;
+      
+      // 모든 날짜 수집 및 정렬
+      const dates = rawCsvRows.map(r => {
+        let d = r[dateCol];
+        if(!d) return null;
+        d = d.toString().trim().replace(/\./g, '-').replace(/\s+/g, '').replace(/-+/g, '-').replace(/^-+|-+$/g, '');
+        const parts = d.split('-');
+        if(parts.length >= 3) {
+          return new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+        }
+        return null;
+      }).filter(d => d && !isNaN(d));
+      
+      if(dates.length === 0) return;
+      
+      const maxDate = new Date(Math.max(...dates));
+      const minDate = new Date(maxDate);
+      minDate.setDate(minDate.getDate() - days + 1);
+      
+      // 날짜 입력 설정
+      document.getElementById('startDate').value = minDate.toISOString().split('T')[0];
+      document.getElementById('endDate').value = maxDate.toISOString().split('T')[0];
+      
+      // Apply 버튼 클릭
+      document.getElementById('btnApplyDateRange').click();
+    }
+    
     // 날짜 범위 필터 적용
     document.getElementById('btnApplyDateRange').addEventListener('click', ()=>{
       if(!rawCsvRows || rawCsvRows.length === 0){
@@ -855,46 +908,86 @@
               break;
               
             case 'WoW':
-              // Week over Week: 7일 전
-              compareDateObj.setDate(compareDateObj.getDate() - 7);
-              compareDate = `${compareDateObj.getFullYear()}-${String(compareDateObj.getMonth()+1).padStart(2,'0')}-${String(compareDateObj.getDate()).padStart(2,'0')}`;
-              // 가장 가까운 날짜 찾기 (정확히 7일 전이 없을 수 있음)
-              const wowDates = allDates.filter(d => {
-                const dObj = new Date(d);
-                const diff = Math.abs((dObj - compareDateObj) / (1000 * 60 * 60 * 24));
-                return diff <= 1; // 1일 이내 차이
-              });
-              if(wowDates.length > 0){
-                const closestDate = wowDates.sort((a,b) => {
-                  const aDiff = Math.abs((new Date(a) - compareDateObj) / (1000 * 60 * 60 * 24));
-                  const bDiff = Math.abs((new Date(b) - compareDateObj) / (1000 * 60 * 60 * 24));
-                  return aDiff - bDiff;
-                })[0];
-                if(trafficByDate[closestDate] && trafficByDate[closestDate][i] !== undefined){
-                  compareValue = trafficByDate[closestDate][i];
+              // Week over Week: 최근 7일 합계 vs 이전 7일 합계
+              {
+                const periodDays = 7;
+                let currentSum = 0, prevSum = 0;
+                const lastIdx = allDates.length - 1;
+                
+                // 최근 7일 합계
+                for(let d = 0; d < periodDays && (lastIdx - d) >= 0; d++){
+                  const dateKey = allDates[lastIdx - d];
+                  if(trafficByDate[dateKey] && trafficByDate[dateKey][i] !== undefined){
+                    currentSum += trafficByDate[dateKey][i];
+                  }
                 }
+                
+                // 이전 7일 합계
+                for(let d = periodDays; d < periodDays * 2 && (lastIdx - d) >= 0; d++){
+                  const dateKey = allDates[lastIdx - d];
+                  if(trafficByDate[dateKey] && trafficByDate[dateKey][i] !== undefined){
+                    prevSum += trafficByDate[dateKey][i];
+                  }
+                }
+                
+                if(prevSum > 0) compareValue = prevSum;
+                lastDayValue = currentSum > 0 ? currentSum : lastDayValue;
               }
               break;
               
             case 'MoM':
-              // Month over Month: 한 달 전
-              compareDateObj.setMonth(compareDateObj.getMonth() - 1);
-              compareDate = `${compareDateObj.getFullYear()}-${String(compareDateObj.getMonth()+1).padStart(2,'0')}-${String(compareDateObj.getDate()).padStart(2,'0')}`;
-              // 가장 가까운 날짜 찾기
-              const momDates = allDates.filter(d => {
-                const dObj = new Date(d);
-                const diff = Math.abs((dObj - compareDateObj) / (1000 * 60 * 60 * 24));
-                return diff <= 3; // 3일 이내 차이
-              });
-              if(momDates.length > 0){
-                const closestDate = momDates.sort((a,b) => {
-                  const aDiff = Math.abs((new Date(a) - compareDateObj) / (1000 * 60 * 60 * 24));
-                  const bDiff = Math.abs((new Date(b) - compareDateObj) / (1000 * 60 * 60 * 24));
-                  return aDiff - bDiff;
-                })[0];
-                if(trafficByDate[closestDate] && trafficByDate[closestDate][i] !== undefined){
-                  compareValue = trafficByDate[closestDate][i];
+              // Month over Month: 최근 30일 합계 vs 이전 30일 합계
+              {
+                const periodDays = 30;
+                let currentSum = 0, prevSum = 0;
+                const lastIdx = allDates.length - 1;
+                
+                // 최근 30일 합계
+                for(let d = 0; d < periodDays && (lastIdx - d) >= 0; d++){
+                  const dateKey = allDates[lastIdx - d];
+                  if(trafficByDate[dateKey] && trafficByDate[dateKey][i] !== undefined){
+                    currentSum += trafficByDate[dateKey][i];
+                  }
                 }
+                
+                // 이전 30일 합계
+                for(let d = periodDays; d < periodDays * 2 && (lastIdx - d) >= 0; d++){
+                  const dateKey = allDates[lastIdx - d];
+                  if(trafficByDate[dateKey] && trafficByDate[dateKey][i] !== undefined){
+                    prevSum += trafficByDate[dateKey][i];
+                  }
+                }
+                
+                if(prevSum > 0) compareValue = prevSum;
+                lastDayValue = currentSum > 0 ? currentSum : lastDayValue;
+              }
+              break;
+              
+            case 'QoQ':
+              // Quarter over Quarter: 최근 90일 합계 vs 이전 90일 합계
+              {
+                const periodDays = 90;
+                let currentSum = 0, prevSum = 0;
+                const lastIdx = allDates.length - 1;
+                
+                // 최근 90일 합계
+                for(let d = 0; d < periodDays && (lastIdx - d) >= 0; d++){
+                  const dateKey = allDates[lastIdx - d];
+                  if(trafficByDate[dateKey] && trafficByDate[dateKey][i] !== undefined){
+                    currentSum += trafficByDate[dateKey][i];
+                  }
+                }
+                
+                // 이전 90일 합계
+                for(let d = periodDays; d < periodDays * 2 && (lastIdx - d) >= 0; d++){
+                  const dateKey = allDates[lastIdx - d];
+                  if(trafficByDate[dateKey] && trafficByDate[dateKey][i] !== undefined){
+                    prevSum += trafficByDate[dateKey][i];
+                  }
+                }
+                
+                if(prevSum > 0) compareValue = prevSum;
+                lastDayValue = currentSum > 0 ? currentSum : lastDayValue;
               }
               break;
               
@@ -1051,16 +1144,20 @@
               compareFromDate = formatDate(prevDate);
               break;
             case 'WoW':
-              comparisonLabel = '전주 대비';
+              comparisonLabel = '주간 합계 (7일)';
               const weekAgo = new Date(lastDate);
               weekAgo.setDate(weekAgo.getDate() - 7);
-              compareFromDate = formatDate(weekAgo);
+              compareFromDate = `최근7일 vs 이전7일`;
               break;
             case 'MoM':
-              comparisonLabel = '전월 대비';
+              comparisonLabel = '월간 합계 (30일)';
               const monthAgo = new Date(lastDate);
               monthAgo.setMonth(monthAgo.getMonth() - 1);
-              compareFromDate = formatDate(monthAgo);
+              compareFromDate = `최근30일 vs 이전30일`;
+              break;
+            case 'QoQ':
+              comparisonLabel = '분기 합계 (90일)';
+              compareFromDate = `최근90일 vs 이전90일`;
               break;
             case 'YoY':
               comparisonLabel = '전년 대비';
