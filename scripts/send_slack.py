@@ -64,8 +64,7 @@ EXCLUDE_KEYWORDS = [
     'KT 위즈', 'kt wiz', '프로야구', '프로축구', 'NBA', 'MLB',
     'Spike War', '스파이크 워', '배구', 'volleyball', 'V리그',
     "Kim Yo-han's serve", '서브 리시브',
-    # 사이버보안/APT (게임 서버 공격 아닌 것)
-    'APT Attacks', 'APT 공격', 'North Korean APT', '북한 해커',
+    # ※ 북한 사이버 공격은 게임 서버 영향 가능성 있어 살림!
 ]
 
 # 카테고리 그룹 정보
