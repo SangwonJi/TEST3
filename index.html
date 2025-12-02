@@ -1814,10 +1814,25 @@
       });
       
       // Update stats
+      // 동적 단위 포맷 함수
+      function formatTraffic(value) {
+        if(value >= 1e9) return (value / 1e9).toFixed(2) + 'B';
+        if(value >= 1e6) return (value / 1e6).toFixed(2) + 'M';
+        if(value >= 1e3) return (value / 1e3).toFixed(1) + 'K';
+        return value.toFixed(0);
+      }
+      
+      // 기간 합계 여부에 따른 라벨/값 결정
+      const isPeriodSum = ['WoW', 'MoM', 'QoQ'].includes(comparisonType);
+      const displayValue = isPeriodSum ? lastTrafficForCalc : lastTraffic;
+      const trafficLabel = isPeriodSum 
+        ? `Traffic (${comparisonType === 'WoW' ? '7일' : comparisonType === 'MoM' ? '30일' : '90일'} 합계)`
+        : 'Current Traffic';
+      
       const statsHTML = `
         <div class="detail-stat-item">
-          <div class="detail-stat-label">Current Traffic</div>
-          <div class="detail-stat-value">${(lastTraffic/1e6).toFixed(2)}M</div>
+          <div class="detail-stat-label">${trafficLabel}</div>
+          <div class="detail-stat-value">${formatTraffic(displayValue)}</div>
         </div>
         <div class="detail-stat-item">
           <div class="detail-stat-label">Change (${comparisonType})</div>
