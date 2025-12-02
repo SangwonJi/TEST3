@@ -284,7 +284,16 @@
         <div class="country-detail-container">
           <!-- 빠른 선택: Top 10 국가 -->
           <div class="quick-select-section">
-            <div class="quick-select-title">🚀 빠른 선택 (Traffic Top 10)</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
+              <div class="quick-select-title" style="margin-bottom:0">🚀 빠른 선택 (Traffic Top 10)</div>
+              <div style="display:flex;gap:8px;align-items:center">
+                <span id="top10DateInfo" style="font-size:12px;color:var(--muted)"></span>
+                <div style="display:flex;background:var(--panel);border:1px solid var(--border);border-radius:6px;overflow:hidden">
+                  <button id="top10LastDay" class="top10-mode-btn active" onclick="setTop10Mode('lastDay')" style="padding:6px 12px;font-size:12px;border:none;background:var(--accent);color:white;cursor:pointer;transition:all 0.2s">마지막 일</button>
+                  <button id="top10Cumulative" class="top10-mode-btn" onclick="setTop10Mode('cumulative')" style="padding:6px 12px;font-size:12px;border:none;background:transparent;color:var(--text);cursor:pointer;transition:all 0.2s">기간 누적</button>
+                </div>
+              </div>
+            </div>
             <div class="quick-select-grid" id="quickSelectTop10"></div>
           </div>
           
@@ -1360,6 +1369,23 @@
     // ---------- Country Detail Tab ----------
     let allCountriesList = []; // 검색용 국가 목록
     let countryTrafficMap = {}; // 국가별 트래픽 맵 (빠른 선택용)
+    let top10Mode = 'lastDay'; // 'lastDay' or 'cumulative'
+    
+    // Top 10 모드 전환
+    function setTop10Mode(mode) {
+      top10Mode = mode;
+      
+      // 버튼 스타일 업데이트
+      document.getElementById('top10LastDay').style.background = mode === 'lastDay' ? 'var(--accent)' : 'transparent';
+      document.getElementById('top10LastDay').style.color = mode === 'lastDay' ? 'white' : 'var(--text)';
+      document.getElementById('top10Cumulative').style.background = mode === 'cumulative' ? 'var(--accent)' : 'transparent';
+      document.getElementById('top10Cumulative').style.color = mode === 'cumulative' ? 'white' : 'var(--text)';
+      
+      // Top 10 다시 계산
+      if(currentData) {
+        updateQuickSelectTop10(currentData);
+      }
+    }
     
     function updateCountrySelect(data){
       if(!data || !data.Country) return;
@@ -1397,12 +1423,72 @@
     // 빠른 선택 Top 10 업데이트
     function updateQuickSelectTop10(data){
       const quickSelect = document.getElementById('quickSelectTop10');
+      const dateInfo = document.getElementById('top10DateInfo');
       if(!quickSelect) return;
       
       const stats = calculateStats(data);
+      let trafficTop10 = [];
+      let dateInfoText = '';
       
-      // 항상 트래픽 기준 Top 10 사용 (Sort By 옵션과 무관하게)
-      const trafficTop10 = stats.trafficTop10 || [];
+      if(top10Mode === 'lastDay') {
+        // 마지막 일 기준 (기존 로직)
+        trafficTop10 = stats.trafficTop10 || [];
+        const lastDate = data.allDates[data.allDates.length - 1];
+        if(lastDate) {
+          const d = new Date(lastDate);
+          if(!isNaN(d)) {
+            dateInfoText = `📅 ${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} 기준`;
+          }
+        }
+      } else {
+        // 기간 누적 기준 - 전체 기간 트래픽 합계
+        const countryTotals = {};
+        const allCountries = data.Country;
+        
+        // 각 국가별 전체 기간 트래픽 합계 계산
+        if(data.countryDataMap) {
+          allCountries.forEach((country, idx) => {
+            if(data.countryDataMap[country]) {
+              let total = 0;
+              Object.values(data.countryDataMap[country]).forEach(val => {
+                total += Number(val) || 0;
+              });
+              if(total > 0) {
+                countryTotals[country] = {
+                  traffic: total,
+                  change: stats.topChange[idx] || 0
+                };
+              }
+            }
+          });
+        }
+        
+        // 합계 기준 Top 10
+        trafficTop10 = Object.entries(countryTotals)
+          .sort((a, b) => b[1].traffic - a[1].traffic)
+          .slice(0, 10)
+          .map(([country, d]) => ({
+            country: country,
+            traffic: d.traffic,
+            change: d.change
+          }));
+        
+        // 날짜 범위 표시
+        const firstDate = data.allDates[0];
+        const lastDate = data.allDates[data.allDates.length - 1];
+        if(firstDate && lastDate) {
+          const d1 = new Date(firstDate);
+          const d2 = new Date(lastDate);
+          if(!isNaN(d1) && !isNaN(d2)) {
+            dateInfoText = `📅 ${d1.getFullYear()}.${String(d1.getMonth()+1).padStart(2,'0')}.${String(d1.getDate()).padStart(2,'0')} ~ ${d2.getFullYear()}.${String(d2.getMonth()+1).padStart(2,'0')}.${String(d2.getDate()).padStart(2,'0')} 누적`;
+          }
+        }
+      }
+      
+      // 날짜 정보 업데이트
+      if(dateInfo) {
+        dateInfo.textContent = dateInfoText;
+      }
       
       quickSelect.innerHTML = trafficTop10.map((item, idx) => {
         const country = item.country;
@@ -1411,8 +1497,13 @@
         const changeColor = change >= 0 ? '#00ff00' : '#ff4d4d';
         const changeSign = change >= 0 ? '+' : '';
         
+        // 트래픽 포맷팅 (마지막 일 vs 누적에 따라 다르게)
+        const trafficText = top10Mode === 'lastDay' 
+          ? `${(traffic/1e6).toFixed(2)}M`
+          : `${(traffic/1e9).toFixed(2)}B`;
+        
         return `
-          <button class="quick-select-btn" data-country="${country}" title="${country}: ${(traffic/1e6).toFixed(2)}M (${changeSign}${change.toFixed(2)}%)">
+          <button class="quick-select-btn" data-country="${country}" title="${country}: ${trafficText} (${changeSign}${change.toFixed(2)}%)">
             <div style="font-weight:600;margin-bottom:4px">${country}</div>
             <div style="font-size:11px;color:var(--muted)">#${idx + 1}</div>
             <div style="font-size:11px;color:${changeColor};margin-top:2px">${changeSign}${change.toFixed(1)}%</div>
