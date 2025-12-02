@@ -954,15 +954,38 @@
       
       // Traffic Top 10 (DoD 기준 마지막 날 트래픽)
       const allCountries = data.Country;
-      const allLastDayTraffic = total;
+      const allLastDayTraffic = total.map(v => Number(v) || 0); // 명시적 숫자 변환
+      
+      // 디버깅: Top 10 계산 전 데이터 확인
+      console.log('=== Traffic Top 10 Debug ===');
+      console.log('Total countries:', allCountries.length);
+      console.log('Sample traffic values (first 10):');
+      allCountries.slice(0, 10).forEach((country, i) => {
+        console.log(`  ${i}: ${country} = ${allLastDayTraffic[i]}`);
+      });
+      
+      // United States 찾기
+      const usIndex = allCountries.findIndex(c => c === 'United States' || c.includes('United States'));
+      if(usIndex >= 0) {
+        console.log(`United States (idx ${usIndex}): ${allLastDayTraffic[usIndex]}`);
+      }
+      
+      // 马约特 찾기
+      const mayotteIndex = allCountries.findIndex(c => c === '马约特' || c.includes('马约特'));
+      if(mayotteIndex >= 0) {
+        console.log(`马约特 (idx ${mayotteIndex}): ${allLastDayTraffic[mayotteIndex]}`);
+      }
+      
       const trafficTop10 = Array.from({length:allCountries.length},(_,i)=>i)
-        .sort((a,b)=> allLastDayTraffic[b]-allLastDayTraffic[a])
+        .sort((a,b)=> allLastDayTraffic[b] - allLastDayTraffic[a])
         .slice(0,10)
         .map(i=>({
           country: allCountries[i],
           traffic: allLastDayTraffic[i],
           change: change[i]
         }));
+      
+      console.log('Traffic Top 10 result:', trafficTop10.map(t => `${t.country}: ${t.traffic}`));
       
       return {topCountries, topRevenue, topChange, totalSum, avgChange,
               maxChange:Math.max(...topChange), minChange:Math.min(...topChange),
